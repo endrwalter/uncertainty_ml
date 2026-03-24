@@ -1,0 +1,43 @@
+randomforestclassifier:
+  max_depth: !python/range [1, 110, 1]
+  min_samples_split: !python/range [2, 30, 1]
+  max_features: ['log2', 'sqrt']
+  n_estimators: !python/range [100, 1000, 5]
+  class_weight: ['balanced_subsample', 'balanced']
+
+extratreesclassifier:
+  n_estimators: !python/range [1, 800, 5]
+  max_depth: !python/range [1, 40, 1]
+  max_features: !python/range [1, 40, 1]
+  class_weight: ['balanced', 'balanced_subsample']
+
+xgbclassifier:
+  learning_rate: !uniform [0.01, 0.1]
+  subsample: !uniform [0.4, 1.0]
+  n_estimators: !randint [50, 250]
+  max_depth: !python/range [1, 20, 1]
+  gamma: !uniform [0, 0.5]
+  scale_pos_weight: [1, 2, 3, 4, 5, 6, 7, 8, 9]
+
+logisticregression:
+  C: !loguniform [0.001, 1000]         # Regularization strength
+  max_iter: !python/range [500, 1000, 1]   # Max number of iterations (was 50)
+  fit_intercept: [True, False]           # Whether to include the intercept
+  class_weight: [ 'balanced']       # Handle imbalanced classes
+
+svc:
+  C: !loguniform [0.0001, 10000]  # Regularization parameter
+  kernel: ['linear', 'poly', 'rbf', 'sigmoid']  # Kernel types
+  degree: !python/range [2, 4, 1]  # Relevant for 'poly' kernel
+  gamma: !uniform [0.001, 1.0]  # Kernel coefficient for 'rbf', '>
+  coef0: [0, 0.5, 1]  # Only relevant for 'poly' and 'sigmoid'
+  class_weight: ['balanced']  # Handle imbalanced classes
+  shrinking: [True, False]  # Use shrinking heuristic
+
+
+SMOTE:
+  sampling_strategy: [0.5, 0.6, 0.7]
+  k_neighbors: [3, 4, 5, 6, 7, 8, 9]
+
+RUS:
+  sampling_strategy: [0.5, 0.6, 0.7, 0.8]

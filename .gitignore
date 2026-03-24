@@ -1,0 +1,4 @@
+data*
+results*
+.sbatch_logs*
+.container_files*
