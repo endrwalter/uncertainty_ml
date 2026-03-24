@@ -409,9 +409,10 @@ def get_final_transformed_test_data(grid_model, X_test):
 
     return X_test_transformed, final_colnames'''
 
-def evaluate_model(grid_model, X_test, y_test, fpr_common):
-    y_pred = grid_model.predict(X_test)
+def evaluate_model(grid_model, X_test, y_test, fpr_common, custom_threshold=0.5):
     y_pred_proba = grid_model.predict_proba(X_test)[:, 1]
+
+    y_pred = (y_pred_proba >= custom_threshold).astype(int)
 
     metrics = {
         'confusion_matrix': confusion_matrix(y_test, y_pred, labels=grid_model.classes_),
@@ -428,6 +429,29 @@ def evaluate_model(grid_model, X_test, y_test, fpr_common):
     roc_auc = auc(fpr, tpr)
 
     return y_pred, y_pred_proba, metrics, tpr_interp, roc_auc
+
+
+def find_optimal_threshold(y_true, y_pred_proba):
+    """
+    Sweeps through probability thresholds to find the one that maximizes MCC.
+    Calculated strictly on TRAINING data to prevent leakage.
+    """
+    best_threshold = 0.5
+    best_mcc = -1.0
+    
+    # Sweep from 0.01 to 0.99 in increments of 0.01
+    thresholds = np.arange(0.01, 1.0, 0.01)
+    
+    for thresh in thresholds:
+        y_pred_temp = (y_pred_proba >= thresh).astype(int)
+        mcc = matthews_corrcoef(y_true, y_pred_temp)
+        
+        if mcc > best_mcc:
+            best_mcc = mcc
+            best_threshold = thresh
+            
+    print(f"Optimal MCC Threshold found: {best_threshold:.2f} (Train MCC: {best_mcc:.3f})")
+    return best_threshold
 
 def my_grid_search(X, y, pipeline, param_dist, n_jobs, refit_metric, scoring, cv_repeats, cv_splits, n_iter, random_state,verbose=True):
 	''' Grid Search Definition | Function Definition

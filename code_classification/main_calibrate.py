@@ -15,7 +15,7 @@ from sklearn.pipeline import Pipeline
 from lib.ensemble.store import get_patient_prob_results, mean_roc_curve_plot, save_raw_results, save_raw_results_w_cal, store_classification_metrics
 from lib.ensemble.importance import compute_shap_values, shap_analysis, shap_analysis_calibrated, store_importances, compute_calibrated_shap_values
 from lib.ensemble.utils import create_result_dirs, generate_paths, load_config, load_data, load_param_distributions, save_config
-from lib.ensemble.pipeline import define_pipeline, evaluate_model, get_final_transformed_test_data, get_score, my_grid_search
+from lib.ensemble.pipeline import define_pipeline, evaluate_model, find_optimal_threshold, get_final_transformed_test_data, get_score, my_grid_search
 # Added calibrate_best_model to imports
 from lib.ensemble.calibration import get_calibration_metrics, plot_aggregated_calibration_curve, calibrate_best_model
 
@@ -75,7 +75,9 @@ def main(config_file) -> int:
         pred_prob_list_final, pred_prob_list_raw = [], []
         pred_y_list_final = []
         test_metrics_list_final= []
-        
+
+        optimal_thresholds_list = []
+
         best_train_metrics_list, best_params_list = [], []
 
         # SHAP and Permutation importance storage
@@ -160,10 +162,19 @@ def main(config_file) -> int:
                 # Calibrate the Model
                 calibrated_model = calibrate_best_model(best_model_raw, X_train, y_train, config)
                 
+                # 1. Get calibrated probabilities for the TRAINING set
+               # y_train_proba_cal = calibrated_model.predict_proba(X_train)[:, 1]
+
+                # 2. Find the optimal threshold that maximizes MCC on the training set
+                #optimal_thresh = find_optimal_threshold(y_train, y_train_proba_cal)
+                optimal_thresh = np.mean(y_train)
+                optimal_thresholds_list.append(optimal_thresh) 
+                
                 # Evaluate Calibrated Model
                 # Note: We don't need to re-extract X_test_transformed as features shouldn't change, 
                 # but passing calibrated_model to evaluate is key.
-                y_pred_cal, y_prob_cal_2d, metrics_cal, tpr_cal, roc_auc_cal = evaluate_model(calibrated_model, X_test, y_test, fpr_common)
+                y_pred_cal, y_prob_cal_2d, metrics_cal, tpr_cal, roc_auc_cal = evaluate_model(calibrated_model, X_test, 
+                y_test, fpr_common, custom_threshold=optimal_thresh)
                 
                 # Ensure 1D extraction for calibrated probs
                 y_pred_proba_cal = y_prob_cal_2d[:, 1] if y_prob_cal_2d.ndim == 2 else y_prob_cal_2d
@@ -252,7 +263,7 @@ def main(config_file) -> int:
                 # Permutation importance (uses X_train/y_train and raw grid_model)
                 if config['perm_importance']:
                     perm = permutation_importance(grid_model, X_train, y_train, n_repeats=10, random_state=random_state,
-                                            scoring=make_scorer(matthews_corrcoef, greater_is_better=True))
+                                            scoring='average_precision')
                     perm_imp_list.append(np.mean(perm.importances, axis=1))
 
             # --- END OF LOOP ---
@@ -284,6 +295,9 @@ def main(config_file) -> int:
             
             calib_metrics_cal_df = pd.DataFrame(calib_metrics_cal_list)
             calib_metrics_cal_df.to_csv(pathlib.Path(res_dir_cl) / 'calibration_metrics_calibrated.csv', index=False)
+            
+            # save optimal thresholds to CSV
+            pd.DataFrame({'fold': range(len(optimal_thresholds_list)), 'optimal_threshold': optimal_thresholds_list}).to_csv(pathlib.Path(res_dir_cl) / 'optimal_thresholds.csv', index=False)
             
             # Plot "After" (Calibrated) -> Use FINAL list
             plot_aggregated_calibration_curve(real_y_list, pred_prob_list_final, calib_metrics_cal_df, res_dir_cl, classifier + '_calibrated')
