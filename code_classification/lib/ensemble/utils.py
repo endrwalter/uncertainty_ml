@@ -308,6 +308,16 @@ def load_data(
         X.reset_index(drop=True, inplace=True)
         y.reset_index(drop=True, inplace=True)
 
+    if y.dtype == bool:
+        y = y.astype(int)
+        print("Notice: Target 'y' was boolean. Converted to integers (0 and 1).")
+    elif y.dtype == object:
+        # Catch string text versions like "True" or "False"
+        y_mapped = y.replace({'True': 1, 'False': 0, 'true': 1, 'false': 0})
+        if pd.api.types.is_numeric_dtype(y_mapped) or y_mapped.dtype == bool:
+            y = y_mapped.astype(int)
+            print("Notice: Target 'y' contained string booleans. Converted to integers (0 and 1).")
+
     # --- Drop other unwanted columns specified by col_to_drop ---
     if col_to_drop:
         cols_to_drop_present = [col for col in col_to_drop if col in X.columns]
