@@ -8,7 +8,6 @@ import pandas as pd
 import shap
 
 
-
 def compute_shap_values(classifier_name, model, X_test_transformed, colnames, rs, res_dir):
     """
     Computes SHAP values using the 'Raw Score' strategy.
@@ -36,7 +35,7 @@ def compute_shap_values(classifier_name, model, X_test_transformed, colnames, rs
             shap_values_class_1_array = shap_values_obj.values[:, :, 1]
 
     # B. KERNEL MODELS (SVC, Stacking, Voting)
-    elif classifier_name in ['svc', 'voting', 'stacking', 'tabpfn']:
+    elif classifier_name in ['svc', 'voting', 'stacking', 'tabpfn', 'xgbclassifier']:
         
         # Target Function
         if hasattr(model, 'decision_function'):
@@ -73,7 +72,8 @@ def compute_shap_values(classifier_name, model, X_test_transformed, colnames, rs
                 shap_values_class_1_array = shap_vals_result
 
     # C. TREE MODELS
-    else: 
+    else:
+             
         explainer = shap.TreeExplainer(model)
         shap_values_obj = explainer(X_test_numpy)
         
@@ -174,102 +174,7 @@ def compute_calibrated_shap_values(model, X_test_raw, colnames, rs, res_dir):
 
     return df_vals
 
-'''
-def compute_shap_values(classifier_name, model, X_test_transformed, colnames, rs, res_dir):
-    """
-    Computes SHAP values, creates a summary plot, and returns SHAP values as a DataFrame.
-    """
-    
-    if classifier_name == 'logisticregression':
-        # PermutationExplainer expects the raw background data.
-        if not isinstance(X_test_transformed, pd.DataFrame):
-            background_data = pd.DataFrame(X_test_transformed, columns=colnames)
-        else:
-            background_data = X_test_transformed
-        explainer = shap.PermutationExplainer(model.predict_proba, background_data)
 
-    elif classifier_name in ['svc', 'voting', 'stacking', 'tabpfn']:
-        # KernelExplainer can use the kmeans summary for a significant speed-up.
-        if not isinstance(X_test_transformed, pd.DataFrame):
-            background_data = pd.DataFrame(X_test_transformed, columns=colnames)
-        else:
-            background_data = X_test_transformed
-        
-        if classifier_name == 'tabpfn':
-            # TabPFN is sensitive to the background data size; using 5 samples.
-            background_summary = shap.kmeans(background_data, 5)
-        else:
-            background_summary = shap.kmeans(background_data, 30)
-        explainer = shap.KernelExplainer(model.predict_proba, background_summary)
-
-    else: # Assumes tree-based models like RandomForest, XGBoost, etc.
-        explainer = shap.TreeExplainer(model)
-
-    # --- CHANGE: Convert DataFrame to NumPy array to match model's training data format ---
-    # This resolves the UserWarning and prevents potential column-order errors.
-    if isinstance(X_test_transformed, pd.DataFrame):
-        X_test_numpy = X_test_transformed.values
-    else:
-        X_test_numpy = X_test_transformed
-        
-    
-    # Select the explanation for the positive class (class 1)
-    if classifier_name == 'xgbclassifier':
-        shap_values_class_1 = explainer(X_test_numpy) # extract shap values for class label 1 if XGB
-    else:	
-        shap_values_class_1 = explainer(X_test_numpy)[:,:,1] # extract shap values for class label 1 if RF or other classifiers
-
-    # The rest of the function uses the 'colnames' variable for labeling, so the output is unaffected.
-    df_vals = pd.DataFrame(shap_values_class_1.values, columns=colnames)
-    df_data = pd.DataFrame(shap_values_class_1.data, columns=colnames)
-
-    # Assign feature names for plotting
-    shap_values_class_1.feature_names = colnames
-
-    # --- Plotting ---
-    plt.figure()
-    shap.summary_plot(shap_values_class_1, show=False)
-    plt.tight_layout()
-    
-    single_shap = pathlib.Path(res_dir / 'single_shaps')
-    single_shap.mkdir(parents=True, exist_ok=True)
-
-    plt.savefig(single_shap / f'summary_{rs}.png', dpi=400)
-    plt.close()
-
-    return df_vals, df_data
-
-OLD VERSION
-def compute_shap_values(classifier_name, model, X_test_transformed, colnames, rs, res_dir):
-    #step_model = model.best_estimator_.named_steps[classifier_name]
-    
-    if classifier_name in ['logisticregression', 'svc']:
-        explainer = shap.PermutationExplainer(model.predict_proba, X_test_transformed)
-    elif classifier_name in ['voting', 'stacking']:
-        explainer = shap.KernelExplainer(model.predict_proba, X_test_transformed)
-    else:
-        explainer = shap.TreeExplainer(model)
-    
-    if classifier_name == 'xgbclassifier':
-        explanation = explainer(X_test_transformed) # extract shap values for class label 1 if XGB
-    else:	
-        explanation = explainer(X_test_transformed)[:,:,1] # extract shap values for class label 1 if RF or other classifiers
-
-    df_vals = pd.DataFrame(explanation.values, columns=colnames)
-    df_data = pd.DataFrame(explanation.data, columns=colnames)
-    
-    explanation.feature_names = colnames
-
-    plt.figure()
-    shap.summary_plot(explanation, show=False)
-    plt.tight_layout()
-    single_shap = pathlib.Path(res_dir / 'single_shaps')
-    single_shap.mkdir(parents=True, exist_ok=True)
-
-    plt.savefig(single_shap / f'summary_{rs}.png', dpi=400)
-    plt.close()
-
-    return df_vals, df_data'''
 
 
 
@@ -297,7 +202,8 @@ def shap_analysis(shap_dir, shap_val_list, shap_data_list):
 	df_shap_data = df_shap_data.iloc[random_indices]
 
 	shap_values_obj = shap.Explanation(values=df_shap_vals.values, data=df_shap_data, 
-									feature_names=df_shap_data.columns) # BASE VALUES kept as default..
+									feature_names=df_shap_data.columns,
+        base_values=np.zeros(len(df_shap_vals))) # BASE VALUES kept as default..
 
 
 	# swarmplot
@@ -329,7 +235,8 @@ def shap_analysis_calibrated(shap_dir, shap_val_list, shap_data_list):
     df_shap_vals = df_shap_values.iloc[random_indices]
     df_shap_data = df_shap_data.iloc[random_indices]
     shap_values_obj = shap.Explanation(values=df_shap_vals.values, data=df_shap_data, 
-									feature_names=df_shap_data.columns) # BASE VALUES kept as default..
+									feature_names=df_shap_data.columns,
+                                    base_values=np.zeros(len(df_shap_vals))) # BASE VALUES kept as default..
 
 
 	# swarmplot
