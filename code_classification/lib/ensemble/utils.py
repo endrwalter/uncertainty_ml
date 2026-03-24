@@ -1,6 +1,7 @@
 import configparser
 import pathlib
 from random import randint
+import sys
 from typing import Dict, List, Optional, Tuple
 import warnings
 import pandas as pd
@@ -111,8 +112,8 @@ def load_config(config_file):
                 dict_config['use_calibration'] = True
             
             # Path settings
-            dict_config['input_path'] = config.get('general', 'input_path', fallback='../data/X_neuroart.csv')
-            dict_config['output_path'] = config.get('general', 'output_path', fallback='../results/all_input_patients_w_bl_var/')
+            dict_config['input_path'] = config.get('general', 'input_path')
+            dict_config['output_path'] = config.get('general', 'output_path')
             
             # Accessing GridSearch parameters
             
@@ -200,7 +201,7 @@ def load_data(
     col_to_drop: Optional[List[str]] = None,
     stratify_on_symptom: bool = True,
     drop_bl_info = True
-) -> Tuple[pd.DataFrame, pd.Series, Dict[str, List[str]], pd.Series]:
+) -> Tuple[pd.DataFrame, pd.Series, Dict[str, List[str]], pd.Series, int]:
     """
     Loads data from a CSV file, preprocesses it, and categorizes features.
 
@@ -266,20 +267,46 @@ def load_data(
         X.drop(columns=[y_label], inplace=True)
         print(f"Target column '{y_label}' extracted and removed from X.")
     else:
-        # Attempt to load y from a separate 'y.csv' if y_label not in X
-        y_csv_path = f'{input_path}/y.csv'
-        try:
-            y = pd.read_csv(y_csv_path, header=None).squeeze("columns")
-            print(f"Target column '{y_label}' not found in main DataFrame. Loaded 'y' from '{y_csv_path}'.")
-        except FileNotFoundError:
-            raise FileNotFoundError(
-                f"Target column '{y_label}' not found in the DataFrame, and "
-                f"'{y_csv_path}' not found."
-            )
-        except pd.errors.EmptyDataError:
-            raise ValueError(f"'{y_csv_path}' is empty. Cannot load target variable.")
-        except Exception as e:
-            raise RuntimeError(f"An error occurred while reading '{y_csv_path}': {e}")
+        # 1. Grab the parent directory and locate y.csv
+        base_dir = pathlib.Path(input_path).parent
+        y_csv_path = base_dir / 'y.csv'
+        
+        print(f"Target '{y_label}' not in X. Attempting to load from: {y_csv_path}")
+        
+        if not y_csv_path.exists():
+            print(f"CRITICAL ERROR: {y_csv_path} does not exist!")
+            sys.exit(1)
+            
+        # 2. Read the file
+        y_df = pd.read_csv(y_csv_path)
+        
+        # 3. Smart parsing logic
+        if y_label in y_df.columns:
+            # Scenario A: It's a DataFrame and the column name matches perfectly
+            y = y_df[y_label]
+            print("Successfully loaded target from matching column name.")
+            
+        elif len(y_df.columns) == 1:
+            # Scenario B: It's a Series/List (only one column exists)
+            print(f"Warning: '{y_label}' not found in header. Safely extracting the only available column.")
+            y = y_df.iloc[:, 0]
+            
+        else:
+            # Scenario C: Multiple columns exist, but no matching name. We must crash safely.
+            print(f"CRITICAL ERROR: 'y.csv' has multiple columns, but none are named '{y_label}'.")
+            sys.exit(1)
+            
+        # Standardize the Series name for downstream pipeline steps
+        y.name = y_label
+        
+        # 4. The Ultimate Safety Check
+        if len(y) != len(X):
+            print(f"CRITICAL ERROR: Row mismatch! X has {len(X)} rows, but y has {len(y)} rows.")
+            sys.exit(1)
+            
+        # Reset indices to ensure perfect alignment before training
+        X.reset_index(drop=True, inplace=True)
+        y.reset_index(drop=True, inplace=True)
 
     # --- Drop other unwanted columns specified by col_to_drop ---
     if col_to_drop:
