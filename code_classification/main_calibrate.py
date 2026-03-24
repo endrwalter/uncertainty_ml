@@ -12,12 +12,12 @@ from sklearn.pipeline import Pipeline
 
 
 # Custom Imports
-from .lib.ensemble.store import get_patient_prob_results, mean_roc_curve_plot, save_raw_results, save_raw_results_w_cal, store_classification_metrics
-from .lib.ensemble.importance import compute_shap_values, shap_analysis, shap_analysis_calibrated, store_importances, compute_calibrated_shap_values
-from .lib.ensemble.utils import create_result_dirs, generate_paths, load_config, load_data, load_param_distributions, save_config
-from .lib.ensemble.pipeline import define_pipeline, evaluate_model, get_final_transformed_test_data, get_score, my_grid_search
+from lib.ensemble.store import get_patient_prob_results, mean_roc_curve_plot, save_raw_results, save_raw_results_w_cal, store_classification_metrics
+from lib.ensemble.importance import compute_shap_values, shap_analysis, shap_analysis_calibrated, store_importances, compute_calibrated_shap_values
+from lib.ensemble.utils import create_result_dirs, generate_paths, load_config, load_data, load_param_distributions, save_config
+from lib.ensemble.pipeline import define_pipeline, evaluate_model, get_final_transformed_test_data, get_score, my_grid_search
 # Added calibrate_best_model to imports
-from .lib.ensemble.calibration import get_calibration_metrics, plot_aggregated_calibration_curve, calibrate_best_model
+from lib.ensemble.calibration import get_calibration_metrics, plot_aggregated_calibration_curve, calibrate_best_model
 
 def main(config_file) -> int:
     
@@ -69,9 +69,7 @@ def main(config_file) -> int:
                                                 feature_types = feature_types, 
                                                 random_state=random_state)
 
-        print('Pipeline : ', pipeline)
-        print('--')
-        print('Param dist: ', param_dist)
+
 
         # Init Storage
         pred_prob_list_final, pred_prob_list_raw = [], []
@@ -93,7 +91,11 @@ def main(config_file) -> int:
         tpr_list, fpr_list, roc_auc_list = [], [], []
 
         fpr_common = np.linspace(0, 1, 100)
-
+        
+        print('Pipeline : ', pipeline)
+        print('--')
+        print('Param dist: ', param_dist)
+        
         # train-test combinations loop
         for rs in rs_list:
             calibrated_model = None  # Safety reset
@@ -140,10 +142,11 @@ def main(config_file) -> int:
             X_test_idx_list.append(X_test.index)
             
             # --- 2. Evaluate RAW (Uncalibrated) Model ---
-            # Used for "Before" plot and fallback if calibration is off
+            # Only transform if SHAP is enabled to save cluster time
             # Important: pass best_model_raw to get_final_transformed to extract features correctly
-            X_test_transformed, final_colnames = get_final_transformed_test_data(best_model_raw, X_test)
-            
+            if config['shap_analysis']:
+                X_test_transformed, final_colnames = get_final_transformed_test_data(best_model_raw, X_test)
+            # Used for "Before" plot and fallback if calibration is off
             y_pred_raw, y_pred_proba_raw, metrics_raw, tpr_raw, roc_auc_raw = evaluate_model(best_model_raw, X_test, y_test, fpr_common)
             
 

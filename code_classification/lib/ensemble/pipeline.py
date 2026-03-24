@@ -322,6 +322,20 @@ def get_score():
     return score
 
 def get_final_transformed_test_data(grid_model, X_test):
+    # 1. Extract the fitted pipeline
+    pipeline = grid_model.best_estimator_ if hasattr(grid_model, 'best_estimator_') else grid_model
+    
+    # 2. Manually pass data through each step (Bypasses the Warning)
+    X_transformed = X_test.copy()
+    for name, step in pipeline.steps[:-1]:
+        X_transformed = step.transform(X_transformed)
+
+    # 3. Grab colnames from the preprocessor (the second to last step)
+    final_colnames = pipeline.steps[-2][1].get_feature_names_out().tolist()
+
+    return X_transformed, final_colnames
+'''
+def get_final_transformed_test_data(grid_model, X_test):
     """
     Extracts the final transformed test set and corresponding feature names
     by applying all steps of the pipeline except the final classifier.
@@ -352,7 +366,7 @@ def get_final_transformed_test_data(grid_model, X_test):
 
     return X_test_transformed, final_colnames
 
-'''old one
+old one
 def get_final_transformed_test_data(grid_model, X_test):
     """
     Extracts the final transformed test set and corresponding feature names
