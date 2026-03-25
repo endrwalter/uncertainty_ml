@@ -1,3 +1,19 @@
+# PIPELINE DESCRIPTION
+
+
+
+# HOW TO RUN THE PIPELINE
+
+
+
+
+
+
+
+
+
+# CHANGES TO THE PIPELINE FOR THE FULL PAPER
+
 ## MAIN CHANGES FROM CIBB SHORTPAPER:
 
 - SHAP Explanation Fix: Added a dummy base_values array and enforced numpy array formatting in shap.Explanation to stop the beeswarm and summary plots from crashing.XGBoost/SHAP 
