@@ -1,2 +1,11 @@
+# ENSEMBLE METHODS
 - How to handle calibration? Do we need to use specific calibration settings for each ml model? 
 
+# UNCERTAINTY ANALYSIS
+- After uncertainty decomposition, what are the next steps?
+    - Classification Rejection Curves using the different uncertainty measures (aleatoric, epistemic, total) and compare them to the baseline (random rejection curve).
+    - CRCs but discarding proportionally samples classified as 0 and classified as 1 (instead of discarding the most uncertain samples regardless of their predicted class). This is to check if the uncertainty measures are more effective at identifying misclassified samples in one class vs the other.
+
+    - Do we want to perform GMM clustering using clinical data (as we did for pd) to check if the uncertainty measures are more effective at identifying misclassified samples in one cluster vs the other? This is to check if the uncertainty measures are more effective at identifying misclassified samples in one cluster vs the other.
+
+    
