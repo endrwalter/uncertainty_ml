@@ -23,6 +23,12 @@ from sklearn.metrics import matthews_corrcoef, confusion_matrix
 import matplotlib.gridspec as gridspec
 
 import pandas as pd
+import numpy as np
+from sklearn.metrics import confusion_matrix
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+import pandas as pd
 
 def plot_uncertainty_distributions(uncertainty_results, H_bl, save_path=None):
     """
@@ -608,3 +614,204 @@ def plot_class_conditioned_rejection_curve(df, threshold, uncertainty_col='H_Tot
     return results_df
 
 
+def plot_comprehensive_rejection_dashboard(df, threshold, prob_col='Final_Calibrated_Prob', 
+                                           uncertainty_col='H_Total', rates=np.linspace(0, 80, 17)):
+    """
+    Plots a 2x2 grid showing the survival trajectories of TP, TN, FP, and FN,
+    comparing Standard Rejection vs. Class-Conditioned Rejection.
+    """
+    results = []
+    df = df.copy()
+    
+    # Standardize probability column names
+    if prob_col not in df.columns and 'mu' in df.columns:
+        prob_col = 'mu'
+        
+    # Generate predictions using the baseline prior
+    if 'y_pred' not in df.columns:
+        df['y_pred'] = (df[prob_col] >= threshold).astype(int)
+        
+    for rate in rates:
+        if rate == 0:
+            kept_std = df.copy()
+            kept_cc = df.copy()
+        else:
+            # 1. Standard Rejection (Global Drop)
+            n_drop_std = int(len(df) * (rate / 100.0))
+            kept_std = df.sort_values(by=uncertainty_col, ascending=False).iloc[n_drop_std:]
+            
+            # 2. Class-Conditioned Rejection (Proportional Drop)
+            pos_pool = df[df['y_pred'] == 1].copy()
+            neg_pool = df[df['y_pred'] == 0].copy()
+            
+            n_drop_pos = int(len(pos_pool) * (rate / 100.0))
+            n_drop_neg = int(len(neg_pool) * (rate / 100.0))
+            
+            kept_pos = pos_pool.sort_values(by=uncertainty_col, ascending=False).iloc[n_drop_pos:] if n_drop_pos > 0 else pos_pool
+            kept_neg = neg_pool.sort_values(by=uncertainty_col, ascending=False).iloc[n_drop_neg:] if n_drop_neg > 0 else neg_pool
+            
+            kept_cc = pd.concat([kept_pos, kept_neg])
+
+        # Helper function to extract all 4 matrix components
+        def get_matrix_components(df_kept):
+            if len(df_kept) == 0: return 0, 0, 0, 0
+            y_true, y_pred = df_kept['label'], df_kept['y_pred']
+            labels_present = np.unique(np.concatenate((y_true, y_pred)))
+            if len(labels_present) > 1:
+                tn, fp, fn, tp = confusion_matrix(y_true, y_pred, labels=[0, 1]).ravel()
+            elif len(labels_present) == 1:
+                tp = sum((y_true == 1) & (y_pred == 1))
+                tn = sum((y_true == 0) & (y_pred == 0))
+                fp = sum((y_true == 0) & (y_pred == 1))
+                fn = sum((y_true == 1) & (y_pred == 0))
+            else:
+                tp = tn = fp = fn = 0
+            return tp, tn, fp, fn
+
+        tp_std, tn_std, fp_std, fn_std = get_matrix_components(kept_std)
+        tp_cc, tn_cc, fp_cc, fn_cc = get_matrix_components(kept_cc)
+        
+        results.append({
+            'Rejection (%)': rate,
+            'TP_Standard': tp_std, 'TN_Standard': tn_std, 'FP_Standard': fp_std, 'FN_Standard': fn_std,
+            'TP_ClassCond': tp_cc, 'TN_ClassCond': tn_cc, 'FP_ClassCond': fp_cc, 'FN_ClassCond': fn_cc
+        })
+        
+    results_df = pd.DataFrame(results)
+
+    # ---------------------------------------------------------
+    # --- Plotting the 2x2 Dashboard ---
+    # ---------------------------------------------------------
+    sns.set_theme(style="whitegrid")
+    fig, axes = plt.subplots(2, 2, figsize=(15, 10))
+    fig.suptitle('Evolution of Confusion Matrix Components During Rejection', fontsize=16, fontweight='bold', y=0.98)
+    
+    # Common styling kwargs to keep code clean
+    kws_std = dict(marker='X', color='crimson', linestyle='--', linewidth=2, markersize=6, label='Standard Rejection')
+    kws_cc = dict(marker='o', color='forestgreen', linestyle='-', linewidth=2.5, markersize=6, label='Class-Conditioned')
+
+    # [0, 0] True Positives (TP)
+    axes[0, 0].plot(results_df['Rejection (%)'], results_df['TP_Standard'], **kws_std)
+    axes[0, 0].plot(results_df['Rejection (%)'], results_df['TP_ClassCond'], **kws_cc)
+    axes[0, 0].set_title('True Positives (Correctly Identified Progressors)', fontsize=13, fontweight='bold')
+    axes[0, 0].set_ylabel('Number of Patients', fontsize=11)
+    
+    # [0, 1] True Negatives (TN)
+    axes[0, 1].plot(results_df['Rejection (%)'], results_df['TN_Standard'], **kws_std)
+    axes[0, 1].plot(results_df['Rejection (%)'], results_df['TN_ClassCond'], **kws_cc)
+    axes[0, 1].set_title('True Negatives (Correctly Identified Healthy)', fontsize=13, fontweight='bold')
+    
+    # [1, 0] False Positives (FP)
+    axes[1, 0].plot(results_df['Rejection (%)'], results_df['FP_Standard'], **kws_std)
+    axes[1, 0].plot(results_df['Rejection (%)'], results_df['FP_ClassCond'], **kws_cc)
+    axes[1, 0].set_title('False Positives (Healthy misclassified as Progressors)', fontsize=13, fontweight='bold')
+    axes[1, 0].set_xlabel('Rejection Rate (%)', fontsize=11)
+    axes[1, 0].set_ylabel('Number of Patients', fontsize=11)
+    
+    # [1, 1] False Negatives (FN)
+    axes[1, 1].plot(results_df['Rejection (%)'], results_df['FN_Standard'], **kws_std)
+    axes[1, 1].plot(results_df['Rejection (%)'], results_df['FN_ClassCond'], **kws_cc)
+    axes[1, 1].set_title('False Negatives (Progressors misclassified as Healthy)', fontsize=13, fontweight='bold')
+    axes[1, 1].set_xlabel('Rejection Rate (%)', fontsize=11)
+
+    # Formatting clean-up
+    for ax in axes.flat:
+        ax.legend(frameon=True, fontsize=10)
+        # Ensure y-axis always starts at 0 for honest visual scaling
+        bottom, top = ax.get_ylim()
+        ax.set_ylim(0, top * 1.05) 
+
+    plt.tight_layout(rect=[0, 0, 1, 0.96]) # Adjust layout to make room for suptitle
+    plt.show()
+
+    return results_df
+
+
+def plot_side_by_side_distributions(df, threshold, rate=25, 
+                                    prob_col='Final_Calibrated_Prob', 
+                                    uncertainty_col='H_Total'):
+    """
+    Plots a 1x2 figure comparing the Kernel Density Estimates (KDE) of uncertainty 
+    for Standard vs. Class-Conditioned rejection methods.
+    """
+    df = df.copy()
+    
+    # Standardize probability column names
+    if prob_col not in df.columns and 'mu' in df.columns:
+        prob_col = 'mu'
+        
+    # Generate predictions using the baseline prior
+    if 'y_pred' not in df.columns:
+        df['y_pred'] = (df[prob_col] >= threshold).astype(int)
+        
+    # ---------------------------------------------------------
+    # 1. Data Splitting Logic (Both Methods)
+    # ---------------------------------------------------------
+    # --- Standard Method ---
+    n_drop_std = int(len(df) * (rate / 100.0))
+    sorted_df_std = df.sort_values(by=uncertainty_col, ascending=False)
+    discarded_std = sorted_df_std.iloc[:n_drop_std]
+    kept_std = sorted_df_std.iloc[n_drop_std:]
+    
+    # --- Class-Conditioned Method ---
+    pos_pool = df[df['y_pred'] == 1].copy()
+    neg_pool = df[df['y_pred'] == 0].copy()
+    
+    n_drop_pos = int(len(pos_pool) * (rate / 100.0))
+    n_drop_neg = int(len(neg_pool) * (rate / 100.0))
+    
+    sorted_pos = pos_pool.sort_values(by=uncertainty_col, ascending=False)
+    discarded_pos = sorted_pos.iloc[:n_drop_pos] if n_drop_pos > 0 else pd.DataFrame()
+    kept_pos = sorted_pos.iloc[n_drop_pos:] if n_drop_pos > 0 else pos_pool
+    
+    sorted_neg = neg_pool.sort_values(by=uncertainty_col, ascending=False)
+    discarded_neg = sorted_neg.iloc[:n_drop_neg] if n_drop_neg > 0 else pd.DataFrame()
+    kept_neg = sorted_neg.iloc[n_drop_neg:] if n_drop_neg > 0 else neg_pool
+    
+    discarded_cc = pd.concat([discarded_pos, discarded_neg])
+    kept_cc = pd.concat([kept_pos, kept_neg])
+
+    # ---------------------------------------------------------
+    # 2. Plotting the 1x2 Figure
+    # ---------------------------------------------------------
+    sns.set_theme(style="whitegrid")
+    fig, axes = plt.subplots(1, 2, figsize=(16, 6))
+    
+    # Define colors
+    color_kept = '#2b8cbe'
+    color_discarded = '#f03b20'
+    
+    # Helper function to plot a single axis
+    def plot_kde(ax, df_kept, df_discarded, title):
+        sns.kdeplot(data=df_kept, x=uncertainty_col, fill=True, color=color_kept, 
+                    alpha=0.5, linewidth=2, label=f'Kept Cohort (N={len(df_kept)})', ax=ax)
+        sns.kdeplot(data=df_discarded, x=uncertainty_col, fill=True, color=color_discarded, 
+                    alpha=0.6, linewidth=2, label=f'Discarded Cohort (N={len(df_discarded)})', ax=ax)
+        
+        mean_kept = df_kept[uncertainty_col].mean()
+        mean_discarded = df_discarded[uncertainty_col].mean()
+        
+        ax.axvline(mean_kept, color=color_kept, linestyle='--', linewidth=2, alpha=0.8)
+        ax.axvline(mean_discarded, color=color_discarded, linestyle='--', linewidth=2, alpha=0.8)
+        
+        # Dynamic text positioning
+        y_max = ax.get_ylim()[1]
+        ax.text(mean_kept, y_max * 0.9, f' Mean:\n {mean_kept:.2f}', 
+                 color=color_kept, fontweight='bold', ha='right', fontsize=11)
+        ax.text(mean_discarded, y_max * 0.85, f' Mean:\n {mean_discarded:.2f}', 
+                 color=color_discarded, fontweight='bold', ha='left', fontsize=11)
+        
+        ax.set_title(title, fontsize=14, fontweight='bold', pad=15)
+        ax.set_xlabel(f'{uncertainty_col} Score', fontsize=12)
+        ax.set_ylabel('Density of Patients', fontsize=12)
+        ax.legend(frameon=True, fontsize=11, loc='upper right')
+    
+    # Plot Standard on Left
+    plot_kde(axes[0], kept_std, discarded_std, f'Standard Method ({rate}% Rejection)')
+    
+    # Plot Class-Conditioned on Right
+    plot_kde(axes[1], kept_cc, discarded_cc, f'Class-Conditioned Method ({rate}% Rejection)')
+
+    sns.despine()
+    plt.tight_layout()
+    plt.show()
