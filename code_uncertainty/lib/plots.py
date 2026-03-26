@@ -10,6 +10,20 @@ from matplotlib.patches import Patch
 from sklearn.metrics import matthews_corrcoef, confusion_matrix
 import matplotlib.gridspec as gridspec
 import matplotlib.colors as mcolors
+import pandas as pd
+import numpy as np
+from sklearn.metrics import confusion_matrix, matthews_corrcoef
+import matplotlib.pyplot as plt
+import seaborn as sns
+import numpy as np
+import matplotlib.colors as mcolors
+from matplotlib.lines import Line2D
+from matplotlib.patches import Patch
+from sklearn.metrics import matthews_corrcoef, confusion_matrix
+import matplotlib.gridspec as gridspec
+
+import pandas as pd
+
 def plot_uncertainty_distributions(uncertainty_results, H_bl, save_path=None):
     """
     Plots the distributions of Total, Aleatoric, and Epistemic uncertainty 
@@ -266,14 +280,6 @@ def plot_combined_uncertainty_analysis(uncertainty_df, y_true, save_path=None):
         plt.savefig(save_path, dpi=300, bbox_inches='tight')
     plt.show()
 
-import matplotlib.pyplot as plt
-import seaborn as sns
-import numpy as np
-import matplotlib.colors as mcolors
-from matplotlib.lines import Line2D
-from matplotlib.patches import Patch
-from sklearn.metrics import matthews_corrcoef, confusion_matrix
-import matplotlib.gridspec as gridspec
 
 def plot_combined_uncertainty_analysis_v2(uncertainty_df, y_true, save_path=None):
     # --- Configuration (Synchronized with Phenotype Template) ---
@@ -470,3 +476,135 @@ def plot_combined_uncertainty_analysis_v2(uncertainty_df, y_true, save_path=None
     if save_path:
         plt.savefig(save_path, dpi=300, bbox_inches='tight')
     plt.show()
+
+
+
+
+
+
+import pandas as pd
+import numpy as np
+from sklearn.metrics import confusion_matrix, matthews_corrcoef
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+def plot_class_conditioned_rejection_curve(df, threshold, uncertainty_col='H_Total', rates=np.linspace(0, 80, 17)):
+    """
+    Calculates TP, TN, FP, FN, MCC, Sensitivity, and Specificity 
+    using a CLASS-CONDITIONED REJECTION rule and plots the resulting curves.
+    """
+    results = []
+    df = df.copy()
+    
+    # Generate predictions using your calculated clinical baseline prior
+    if 'y_pred' not in df.columns:
+        df['y_pred'] = (df['mu'] >= threshold).astype(int)
+        
+    for rate in rates:
+        if rate > 0:
+            # Split the global dataframe by PREDICTED class
+            pos_pool = df[df['y_pred'] == 1].copy()
+            neg_pool = df[df['y_pred'] == 0].copy()
+            
+            # Calculate the drop quotas proportionally for EACH class
+            n_drop_pos = int(len(pos_pool) * (rate / 100.0))
+            n_drop_neg = int(len(neg_pool) * (rate / 100.0))
+            
+            # Sort by uncertainty and drop the most uncertain inside each class
+            if n_drop_pos > 0:
+                kept_pos = pos_pool.sort_values(by=uncertainty_col, ascending=False).iloc[n_drop_pos:]
+            else:
+                kept_pos = pos_pool
+                
+            if n_drop_neg > 0:
+                kept_neg = neg_pool.sort_values(by=uncertainty_col, ascending=False).iloc[n_drop_neg:]
+            else:
+                kept_neg = neg_pool
+            
+            # Recombine the surviving patients back into a single global cohort
+            global_kept = pd.concat([kept_pos, kept_neg])
+        else:
+            global_kept = df.copy()
+            
+        # Evaluate the metrics
+        y_true = global_kept['label']
+        y_pred = global_kept['y_pred']
+        
+        labels_present = np.unique(np.concatenate((y_true, y_pred))) if len(global_kept) > 0 else []
+        
+        if len(labels_present) > 1:
+            tn, fp, fn, tp = confusion_matrix(y_true, y_pred, labels=[0, 1]).ravel()
+            mcc = matthews_corrcoef(y_true, y_pred)
+        elif len(labels_present) == 1:
+            tp = sum((y_true == 1) & (y_pred == 1))
+            tn = sum((y_true == 0) & (y_pred == 0))
+            fp = sum((y_true == 0) & (y_pred == 1))
+            fn = sum((y_true == 1) & (y_pred == 0))
+            mcc = 0.0
+        else:
+            tp = tn = fp = fn = 0
+            mcc = 0.0
+            
+        # Safely calculate Sensitivity and Specificity (handle division by zero)
+        sens = tp / (tp + fn) if (tp + fn) > 0 else np.nan
+        spec = tn / (tn + fp) if (tn + fp) > 0 else np.nan
+            
+        results.append({
+            'Rejection (%)': rate,
+            'Total Kept': len(global_kept),
+            'TP': tp, 'FP': fp, 'TN': tn, 'FN': fn,
+            'MCC': mcc if not pd.isna(mcc) else np.nan,
+            'Sensitivity': sens,
+            'Specificity': spec
+        })
+            
+    # Format as a clean DataFrame
+    results_df = pd.DataFrame(results)
+    
+    # ---------------------------------------------------------
+    # --- Plotting the Rejection Curve ---
+    # ---------------------------------------------------------
+    sns.set_theme(style="ticks")
+    plt.figure(figsize=(8, 5))
+    
+    plt.plot(results_df['Rejection (%)'], results_df['MCC'], 
+             marker='s', color='navy', linewidth=2, markersize=6, label='MCC')
+    plt.plot(results_df['Rejection (%)'], results_df['Sensitivity'], 
+             marker='o', color='forestgreen', linewidth=2, markersize=6, label='Sensitivity')
+    plt.plot(results_df['Rejection (%)'], results_df['Specificity'], 
+             marker='^', color='darkorange', linewidth=2, markersize=6, label='Specificity')
+    
+    plt.ylim(-0.25, 1.05)
+    plt.axhline(0, color='black', lw=1, ls='--', alpha=0.3)
+    
+    plt.title('Class-Conditioned Rejection Curve', fontsize=14, fontweight='bold')
+    plt.xlabel('Rejection Rate (%)', fontsize=12)
+    plt.ylabel('Score', fontsize=12)
+    
+    # Place legend neatly below the plot
+    plt.legend(loc='lower center', bbox_to_anchor=(0.5, -0.25), ncol=3, frameon=False, fontsize=11)
+    
+    # Clean up formatting
+    plt.grid(axis='y', linestyle='--', alpha=0.3)
+    sns.despine()
+    plt.tight_layout()
+    plt.show()
+
+    # ---------------------------------------------------------
+    # --- Console Output ---
+    # ---------------------------------------------------------
+    print("="*95)
+    print("GLOBAL CLASS-CONDITIONED REJECTION: METRICS EVOLUTION")
+    print("="*95)
+    
+    # Create a copy just for printing so the rounding doesn't destroy the actual returned data
+    display_df = results_df.copy()
+    display_df[['MCC', 'Sensitivity', 'Specificity']] = display_df[['MCC', 'Sensitivity', 'Specificity']].round(3)
+    display_df['Rejection (%)'] = display_df['Rejection (%)'].astype(int)
+    
+    print(display_df.to_string(index=False))
+    print("="*95)
+    
+    return results_df
+
+
