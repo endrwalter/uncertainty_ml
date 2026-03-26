@@ -10,9 +10,6 @@
 
     - Class condition rejection curves used on the entire dataset as an agnostic way.
 
-    - Which results do we want to show in the paper?
-    - What's the main objective? 
-        - performance improvement?
-        - understanding the model's behavior?
-        - understanding the data?
-        - analyzing rejection curves failures?
+
+
+# Absolute uncertainty is not a fair metric for rejection in imbalanced clinical data. You have to judge a prediction's uncertainty relative to the baseline difficulty of its class. -> Thats why conditional rejection curves are more appropriate for clinical data.

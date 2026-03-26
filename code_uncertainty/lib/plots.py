@@ -1,10 +1,4 @@
-from matplotlib import pyplot as plt
-import seaborn as sns
 import os
-
-import matplotlib.pyplot as plt
-import seaborn as sns
-import numpy as np
 from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
 from sklearn.metrics import matthews_corrcoef, confusion_matrix
@@ -12,23 +6,9 @@ import matplotlib.gridspec as gridspec
 import matplotlib.colors as mcolors
 import pandas as pd
 import numpy as np
-from sklearn.metrics import confusion_matrix, matthews_corrcoef
-import matplotlib.pyplot as plt
-import seaborn as sns
-import numpy as np
-import matplotlib.colors as mcolors
-from matplotlib.lines import Line2D
-from matplotlib.patches import Patch
-from sklearn.metrics import matthews_corrcoef, confusion_matrix
-import matplotlib.gridspec as gridspec
-
-import pandas as pd
-import numpy as np
-from sklearn.metrics import confusion_matrix
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-import pandas as pd
 
 def plot_uncertainty_distributions(uncertainty_results, H_bl, save_path=None):
     """
@@ -96,9 +76,6 @@ def plot_uncertainty_distributions(uncertainty_results, H_bl, save_path=None):
 
     # Display the plot
     plt.show()
-
-
-
 
 
 def plot_combined_uncertainty_analysis(uncertainty_df, y_true, save_path=None):
@@ -483,16 +460,6 @@ def plot_combined_uncertainty_analysis_v2(uncertainty_df, y_true, save_path=None
         plt.savefig(save_path, dpi=300, bbox_inches='tight')
     plt.show()
 
-
-
-
-
-
-import pandas as pd
-import numpy as np
-from sklearn.metrics import confusion_matrix, matthews_corrcoef
-import matplotlib.pyplot as plt
-import seaborn as sns
 
 def plot_class_conditioned_rejection_curve(df, threshold, uncertainty_col='H_Total', rates=np.linspace(0, 80, 17)):
     """
