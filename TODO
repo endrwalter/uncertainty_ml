@@ -8,4 +8,11 @@
 
     - Do we want to perform GMM clustering using clinical data (as we did for pd) to check if the uncertainty measures are more effective at identifying misclassified samples in one cluster vs the other? This is to check if the uncertainty measures are more effective at identifying misclassified samples in one cluster vs the other.
 
-    
+    - Class condition rejection curves used on the entire dataset as an agnostic way.
+
+    - Which results do we want to show in the paper?
+    - What's the main objective? 
+        - performance improvement?
+        - understanding the model's behavior?
+        - understanding the data?
+        - analyzing rejection curves failures?
