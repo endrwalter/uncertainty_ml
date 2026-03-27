@@ -125,15 +125,12 @@ def main(config_file) -> int:
                     strat_col_temp = strat_col.copy()
           
             # Standard train-test split or GrupShuffleSplit if group column is specified
-            if config['use_group_split'] and 'group_column' in config:
-                
-                # Fetch groups safely
-                if config['group_column'] in X_temp.columns:
-                    # Case 1: The ID is still a column
-                    groups = X_temp[config['group_column']]
+            if config['use_group_split']:
+                # Check if it's the MultiIndex tuple ('Patient', Month)
+                if isinstance(X_temp.index, pd.MultiIndex):
+                    # This safely extracts ONLY '002_S_0729' for the grouping logic
+                    groups = X_temp.index.get_level_values(0) 
                 else:
-                    # Case 2: The ID is the index (most common in your current load_data)
-                    # We use .index directly and stop checking for the .name attribute
                     groups = X_temp.index
                 
                 gss = GroupShuffleSplit(n_splits=1, test_size=config['train_test_split_size'], random_state=rs)
@@ -280,7 +277,7 @@ def main(config_file) -> int:
                     )
                     shap_cal_val_list.append(df_shap_cal)
 
-                    shap_cal_data_list.append(X_test.reset_index(drop=True))
+                    shap_cal_data_list.append(X_test.reset_index(drop=False))  # Store the original test data for calibrated SHAP analysis. It was True
 
                 # Permutation importance (uses X_train/y_train and raw grid_model)
                 if config['perm_importance']:

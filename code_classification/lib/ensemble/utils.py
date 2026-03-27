@@ -2,7 +2,7 @@ import configparser
 import pathlib
 from random import randint
 import sys
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Union
 import warnings
 import pandas as pd
 from scipy.stats import randint, uniform, loguniform
@@ -116,7 +116,8 @@ def load_config(config_file):
                 dict_config['use_group_split'] = False
             else:
                 dict_config['use_group_split'] = True
-            dict_config['group_column'] = config.get('general', 'group_column', fallback=None)
+            if dict_config['use_group_split']:
+                dict_config['group_column'] = config.get('general', 'group_column').split()
 
             # Path settings
             dict_config['input_path'] = config.get('general', 'input_path')
@@ -208,7 +209,7 @@ def load_data(
     col_to_drop: Optional[List[str]] = None,
     stratify_on_symptom: bool = True,
     drop_bl_info = True,
-    group_col: Optional[str] = None
+    group_col: Optional[Union[str, List[str]]] = None #
 ) -> Tuple[pd.DataFrame, pd.Series, Dict[str, List[str]], pd.Series, int]:
     """
     Loads data from a CSV file, preprocesses it, and categorizes features.
@@ -254,12 +255,18 @@ def load_data(
         raise RuntimeError(f"An error occurred while reading '{input_path}': {e}")
 
     # --- Set Group column as Index if specified and exists ---
-    if group_col:
-        if group_col in X.columns:
-            X.set_index(group_col, inplace=True)
-            print(f"Group column '{group_col}' set as index for proper group-based splitting.")
+    if group_col is not None:
+        # Convert single string to a list for uniform processing
+        cols_to_set = [group_col] if isinstance(group_col, str) else group_col
+        
+        # Check if ALL requested index columns exist in the DataFrame
+        if all(col in X.columns for col in cols_to_set):
+            X.set_index(cols_to_set, inplace=True)
+            index_type = "MultiIndex" if len(cols_to_set) > 1 else "Single Index"
+            print(f"{index_type} set using {cols_to_set} for proper tracking.")
         else:
-            warnings.warn(f"Specified group column '{group_col}' not found in DataFrame. Proceeding without group-based splitting.")
+            warnings.warn(f"Specified index columns {cols_to_set} not fully found in DataFrame. Proceeding without setting index.")
+            group_col = None # Reset so we don't try to align y with a failed index
     
     # ---- Capture Center info ---
     center_info = None # NO CENTER STRATIFICATION IN THE CURRENT VERSION 
@@ -286,46 +293,41 @@ def load_data(
         # 1. Grab the parent directory and locate y.csv
         base_dir = pathlib.Path(input_path).parent
         y_csv_path = base_dir / 'y.csv'
-        
         print(f"Target '{y_label}' not in X. Attempting to load from: {y_csv_path}")
         
         if not y_csv_path.exists():
             print(f"CRITICAL ERROR: {y_csv_path} does not exist!")
             sys.exit(1)
             
-        # 2. Read the file
         y_df = pd.read_csv(y_csv_path)
         
-        # 3. Smart parsing logic
         if y_label in y_df.columns:
-            # Scenario A: It's a DataFrame and the column name matches perfectly
             y = y_df[y_label]
             print("Successfully loaded target from matching column name.")
-            
         elif len(y_df.columns) == 1:
-            # Scenario B: It's a Series/List (only one column exists)
             print(f"Warning: '{y_label}' not found in header. Safely extracting the only available column.")
             y = y_df.iloc[:, 0]
-            
         else:
-            # Scenario C: Multiple columns exist, but no matching name. We must crash safely.
             print(f"CRITICAL ERROR: 'y.csv' has multiple columns, but none are named '{y_label}'.")
             sys.exit(1)
             
-        # Standardize the Series name for downstream pipeline steps
         y.name = y_label
         
-        # 4. The Ultimate Safety Check
         if len(y) != len(X):
             print(f"CRITICAL ERROR: Row mismatch! X has {len(X)} rows, but y has {len(y)} rows.")
             sys.exit(1)
 
-        # Align y's index to match X's index (preserves subject_id if it exists)
-        if group_col and group_col in list(X.index.names):
-            y.index = X.index
-        else:
-            y.reset_index(drop=True, inplace=True)
-            X.reset_index(drop=True, inplace=True)  
+    # ---------------------------------------------------------
+    #  SAFE INDEX ALIGNMENT
+    # ---------------------------------------------------------
+    # If we successfully set an index on X (either Single or Multi), align y to it
+    if group_col is not None and X.index.name is not None or isinstance(X.index, pd.MultiIndex):
+        y.index = X.index
+        print("Target variable 'y' index aligned with X.")
+    else:
+        y.reset_index(drop=True, inplace=True)
+        X.reset_index(drop=True, inplace=True) 
+    # ---------------------------------------------------------
 
     if y.dtype == bool:
         y = y.astype(int)

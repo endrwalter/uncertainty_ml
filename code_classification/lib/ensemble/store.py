@@ -66,12 +66,30 @@ def save_raw_results(X_test_idx_list, real_y_list, pred_y_list, pred_prob_list, 
 	y_pred_flat = [item for sublist in pred_y_list for item in sublist]
 	y_proba_flat = [item for sublist in pred_prob_list for item in sublist]
 
-	# Create a DataFrame directly from the flattened lists
-	df_raw_results = pd.DataFrame({
-								'idx': X_test_flat,
-								'real y': y_real_flat,
-								'pred y': y_pred_flat,
-								'prob y=1': np.round(y_proba_flat,2)})
+	# --- NEW: MULTI-INDEX UNPACKING ---
+    # Check if the first item is a tuple (meaning it's our new MultiIndex)
+	if len(X_test_flat) > 0 and isinstance(X_test_flat[0], tuple):
+		subject_ids = [item[0] for item in X_test_flat]
+		months = [item[1] for item in X_test_flat]
+        
+		df_data = {
+            'subject_id': subject_ids,
+            'month': months,
+            'real y': y_real_flat,
+            'pred y': y_pred_flat,
+            'prob y=1': np.round(y_proba_flat, 2)
+        }
+	else:
+        # Fallback for standard single-level index
+		df_data = {
+            'idx': X_test_flat,
+            'real y': y_real_flat,
+            'pred y': y_pred_flat,
+            'prob y=1': np.round(y_proba_flat, 2)
+        }
+
+    # Create a DataFrame directly from the dictionary
+	df_raw_results = pd.DataFrame(df_data)
 
 	# add a column that tells us about real y=1 -> set 1 if real and pred are = 1 and 0 if they are different
 	df_raw_results['true prediction y=1'] = np.where(df_raw_results['pred y'] == 1, df_raw_results['real y'], np.nan)
@@ -82,21 +100,38 @@ def save_raw_results(X_test_idx_list, real_y_list, pred_y_list, pred_prob_list, 
 
 
 def save_raw_results_w_cal(X_test_idx_list, real_y_list, pred_prob_list, pred_prob_cal_list, res_dir_cl):
-	# Flatten the lists
-	X_test_flat = [item for sublist in X_test_idx_list for item in sublist]
-	y_real_flat = [item for sublist in real_y_list for item in sublist]
-	y_proba_flat = [item for sublist in pred_prob_list for item in sublist]
-	y_proba_cal_flat = [item for sublist in pred_prob_cal_list for item in sublist]
+    # Flatten the lists
+    X_test_flat = [item for sublist in X_test_idx_list for item in sublist]
+    y_real_flat = [item for sublist in real_y_list for item in sublist]
+    y_proba_flat = [item for sublist in pred_prob_list for item in sublist]
+    y_proba_cal_flat = [item for sublist in pred_prob_cal_list for item in sublist]
 
-	# Create a DataFrame directly from the flattened lists
-	df_raw_results = pd.DataFrame({
-								'idx': X_test_flat,
-								'real y': y_real_flat,
-								'probs_raw': np.round(y_proba_flat,2),
-                                'probs_cal': np.round(y_proba_cal_flat,2)})	
-	
-	# store DataFrame of raw results
-	df_raw_results.to_csv(res_dir_cl / 'raw_results_calibration.csv', index=False)
+    # --- MULTI-INDEX UNPACKING ---
+    if len(X_test_flat) > 0 and isinstance(X_test_flat[0], tuple):
+        subject_ids = [item[0] for item in X_test_flat]
+        months = [item[1] for item in X_test_flat]
+        
+        df_data = {
+            'subject_id': subject_ids,
+            'month': months,
+            'real y': y_real_flat,
+            'probs_raw': np.round(y_proba_flat, 2),
+            'probs_cal': np.round(y_proba_cal_flat, 2)
+        }
+    else:
+        # Fallback for standard single-level index
+        df_data = {
+            'idx': X_test_flat,
+            'real y': y_real_flat,
+            'probs_raw': np.round(y_proba_flat, 2),
+            'probs_cal': np.round(y_proba_cal_flat, 2)
+        }
+
+    # Create a DataFrame directly from the dictionary
+    df_raw_results = pd.DataFrame(df_data)
+    
+    # store DataFrame of raw results
+    df_raw_results.to_csv(res_dir_cl / 'raw_results_calibration.csv', index=False)
       
 
 
@@ -114,6 +149,7 @@ def get_patient_prob_results(X_idx, X_test_idx_list, pred_prob_list, rs_list, re
             seen_dict[idx].add(col_name)
 
     # Build DataFrame with all X_idx entries
+    # If X_idx is a MultiIndex, df_probs automatically inherits it!
     df_probs = pd.DataFrame(index=X_idx)
     for rs in rs_list:
         df_probs[rs] = pd.NA  # Initialize with NaN
@@ -122,7 +158,14 @@ def get_patient_prob_results(X_idx, X_test_idx_list, pred_prob_list, rs_list, re
         for col_name, val in prob_dict[idx]:
             df_probs.loc[idx, col_name] = val
 
-    df_probs.index.name = 'idx'
+    # --- MULTI-INDEX HANDLING ---
+    if isinstance(df_probs.index, pd.MultiIndex):
+        # Name the levels so they become beautiful columns when reset
+        df_probs.index.names = ['subject_id', 'month']
+    else:
+        # Fallback for standard single-level index
+        df_probs.index.name = 'idx'
+        
     df_probs.reset_index(inplace=True)
 
     # Save to CSV
