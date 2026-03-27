@@ -16,7 +16,7 @@ from sklearn.pipeline import Pipeline
 from lib.ensemble.store import get_patient_prob_results, mean_roc_curve_plot, save_raw_results, save_raw_results_w_cal, store_classification_metrics
 from lib.ensemble.importance import compute_shap_values, shap_analysis, shap_analysis_calibrated, store_importances, compute_calibrated_shap_values
 from lib.ensemble.utils import create_result_dirs, generate_paths, load_config, load_data, load_param_distributions, save_config
-from lib.ensemble.pipeline import define_pipeline, evaluate_model, find_optimal_threshold, get_final_transformed_test_data, get_score, my_grid_search
+from lib.ensemble.pipeline import define_pipeline, evaluate_model, get_final_transformed_test_data, get_score, my_grid_search
 # Added calibrate_best_model to imports
 from lib.ensemble.calibration import get_calibration_metrics, plot_aggregated_calibration_curve, calibrate_best_model
 

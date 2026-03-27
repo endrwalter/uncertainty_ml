@@ -125,7 +125,7 @@ def load_config(config_file):
             # Accessing GridSearch parameters
             
             dict_config['n_jobs'] = config.getint('gridsearch params', 'n_jobs', fallback=6)
-            dict_config['refit'] = config.get('gridsearch params', 'refit', fallback='mcc')
+            dict_config['refit'] = config.get('gridsearch params', 'refit')
             dict_config['cv_repeats'] = config.getint('gridsearch params', 'cv_repeats', fallback=3)
             dict_config['cv_splits'] = config.getint('gridsearch params', 'cv_splits', fallback=5)
             dict_config['n_iter'] = config.getint('gridsearch params', 'n_iter', fallback=50)

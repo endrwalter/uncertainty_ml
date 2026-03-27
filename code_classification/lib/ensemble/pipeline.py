@@ -460,7 +460,7 @@ def my_grid_search(X, y, pipeline, param_dist, n_jobs, refit_metric, scoring, cv
 		y : train labels
 		param_grid : (list) dictionary of parameters that will be tested in the grid search. 
 		param_dist : list dictionary of parameters (as distribution) used in randomizedsearchcv
-		refit : string, default: 'mcc'
+		refit : string
 		scoring : dicitionary of scores that will be used in grid search
 		cv_repeats: how many time cross validation will be repeated. default: 5
 		cv_splits: number of folds. default: 5
