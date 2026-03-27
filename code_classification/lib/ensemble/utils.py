@@ -111,6 +111,13 @@ def load_config(config_file):
             else:
                 dict_config['use_calibration'] = True
             
+            dict_config['use_group_split'] = config.get('general', 'use_group_split', fallback=False)
+            if dict_config['use_group_split'] == 'False':
+                dict_config['use_group_split'] = False
+            else:
+                dict_config['use_group_split'] = True
+            dict_config['group_column'] = config.get('general', 'group_column', fallback=None)
+
             # Path settings
             dict_config['input_path'] = config.get('general', 'input_path')
             dict_config['output_path'] = config.get('general', 'output_path')
@@ -200,7 +207,8 @@ def load_data(
     y_label: str,
     col_to_drop: Optional[List[str]] = None,
     stratify_on_symptom: bool = True,
-    drop_bl_info = True
+    drop_bl_info = True,
+    group_col: Optional[str] = None
 ) -> Tuple[pd.DataFrame, pd.Series, Dict[str, List[str]], pd.Series, int]:
     """
     Loads data from a CSV file, preprocesses it, and categorizes features.
@@ -245,6 +253,14 @@ def load_data(
     except Exception as e:
         raise RuntimeError(f"An error occurred while reading '{input_path}': {e}")
 
+    # --- Set Group column as Index if specified and exists ---
+    if group_col:
+        if group_col in X.columns:
+            X.set_index(group_col, inplace=True)
+            print(f"Group column '{group_col}' set as index for proper group-based splitting.")
+        else:
+            warnings.warn(f"Specified group column '{group_col}' not found in DataFrame. Proceeding without group-based splitting.")
+    
     # ---- Capture Center info ---
     center_info = None # NO CENTER STRATIFICATION IN THE CURRENT VERSION 
     #if 'Center' in X.columns:
@@ -252,7 +268,7 @@ def load_data(
     #    print("Center information captured for stratification.")
 
     # --- Handle default columns to drop ---
-    default_to_drop = ['PatientID', 'Center']
+    default_to_drop = ['PatientID', 'Center', 'subject_id']  # Added 'subject_id' as a common identifier column
     present_default_cols = [col for col in default_to_drop if col in X.columns]
     if present_default_cols:
         X.drop(columns=present_default_cols, inplace=True)
@@ -303,10 +319,13 @@ def load_data(
         if len(y) != len(X):
             print(f"CRITICAL ERROR: Row mismatch! X has {len(X)} rows, but y has {len(y)} rows.")
             sys.exit(1)
-            
-        # Reset indices to ensure perfect alignment before training
-        X.reset_index(drop=True, inplace=True)
-        y.reset_index(drop=True, inplace=True)
+
+        # Align y's index to match X's index (preserves subject_id if it exists)
+        if group_col and group_col in list(X.index.names):
+            y.index = X.index
+        else:
+            y.reset_index(drop=True, inplace=True)
+            X.reset_index(drop=True, inplace=True)  
 
     if y.dtype == bool:
         y = y.astype(int)

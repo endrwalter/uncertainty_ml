@@ -3,11 +3,12 @@ import pathlib
 import random
 import sys
 
+from networkx import config
 import numpy as np
 import pandas as pd
 from sklearn.inspection import permutation_importance
 from sklearn.metrics import make_scorer, matthews_corrcoef
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, GroupShuffleSplit
 from sklearn.pipeline import Pipeline
 
 
@@ -44,7 +45,9 @@ def main(config_file) -> int:
     X_orig, y_orig, feature_types, strat_col, n_drop = load_data(input_dir, config['path_to_feature_types'],
                                    y_label=config['y_label'], col_to_drop=config['col_to_drop'], 
                                    stratify_on_symptom=True, 
-                                   drop_bl_info=config['drop_bl_info'])
+                                   drop_bl_info=config['drop_bl_info'],
+                                   group_col=config['group_column'] if config['use_group_split'] else None
+                                   )
     
 
 
@@ -120,8 +123,27 @@ def main(config_file) -> int:
                     strat_col_temp = strat_col.drop(index=drop_idx, errors='ignore')
                 else:
                     strat_col_temp = strat_col.copy()
-            
-            X_train, X_test, y_train, y_test = train_test_split(X_temp, y_temp, stratify=strat_col_temp, test_size=config['train_test_split_size'], random_state=rs)
+          
+            # Standard train-test split or GrupShuffleSplit if group column is specified
+            if config['use_group_split'] and 'group_column' in config:
+                
+                # Fetch groups safely
+                if config['group_column'] in X_temp.columns:
+                    # Case 1: The ID is still a column
+                    groups = X_temp[config['group_column']]
+                else:
+                    # Case 2: The ID is the index (most common in your current load_data)
+                    # We use .index directly and stop checking for the .name attribute
+                    groups = X_temp.index
+                
+                gss = GroupShuffleSplit(n_splits=1, test_size=config['train_test_split_size'], random_state=rs)
+                train_idx, test_idx = next(gss.split(X_temp, y_temp, groups))
+           
+                # We use .iloc because GroupShuffleSplit returns integer locations
+                X_train, y_train = X_temp.iloc[train_idx].copy(), y_temp.iloc[train_idx].copy()
+                X_test, y_test = X_temp.iloc[test_idx].copy(), y_temp.iloc[test_idx].copy()
+            else:
+                X_train, X_test, y_train, y_test = train_test_split(X_temp, y_temp, stratify=strat_col_temp, test_size=config['train_test_split_size'], random_state=rs)
             
             
             # --- 1. Train Base Model (Grid Search) ---
