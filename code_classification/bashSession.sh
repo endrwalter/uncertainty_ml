@@ -3,10 +3,10 @@
 #SBATCH --partition=cpu
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=6
+#SBATCH --cpus-per-task=16
 #SBATCH --mem=60G
 #SBATCH --time=72:00:00
-#SBATCH --array=0-2
+#SBATCH --array=0
 #SBATCH --output=/storage/DSH/projects/neuroart/uncertainty_ml/.sbatch_logs/%x_%A_%a_stdOut.txt
 #SBATCH --error=/storage/DSH/projects/neuroart/uncertainty_ml/.sbatch_logs/%x_%A_%a_stdErr.txt
 
@@ -24,8 +24,8 @@ export PYTHONPATH="/storage/DSH/projects/neuroart/uncertainty_ml:$PYTHONPATH"
 # You can put completely different python scripts here, or the same script with different configs!
 COMMANDS=(
     "python3 main_calibrate.py --config ../data/adni/config.ini"
-    "python3 main_calibrate.py --config ../data/ms_neuro/config.ini"
-    "python3 main_calibrate.py --config ../data/pd_neuro/config.ini"
+    #"python3 main_calibrate.py --config ../data/ms_neuro/config.ini"
+    #"python3 main_calibrate.py --config ../data/pd_neuro/config.ini"
 )
 
 # 4. Extract the specific command for this exact array task

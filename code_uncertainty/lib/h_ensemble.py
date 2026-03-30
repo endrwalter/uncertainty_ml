@@ -4,7 +4,7 @@ import pandas as pd
 import os
 import pandas as pd
 
-def build_ensemble_csv(analysis_name, outcome_name):
+def build_ensemble_csv(analysis_name, outcome_name, index_col='idx'):
     base_path = f'../results/classification/{analysis_name}/{outcome_name}'
     all_data_list = []
 
@@ -41,7 +41,9 @@ def build_ensemble_csv(analysis_name, outcome_name):
     
     # Calculate mean (mu) and std (sigma) per patient (idx)
     # FIX: Column updated to 'probs_cal' to match your actual data
-    patient_stats = full_df.groupby('idx').agg(
+    # check if index col is an array of two elements, if so, we need to handle the multi index case
+    
+    patient_stats = full_df.groupby(index_col).agg(
         mu=('probs_cal', 'mean'),
         sigma=('probs_cal', 'std'),
         label=('real y', 'first'),
