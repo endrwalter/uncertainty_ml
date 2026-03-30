@@ -1,1 +1,6 @@
-{}
+{
+    "python.analysis.extraPaths": [
+        "./code_uncertainty",
+        "./code_uncertainty"
+    ]
+}
