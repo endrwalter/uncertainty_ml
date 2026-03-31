@@ -19,7 +19,7 @@
     - Class condition rejection curves used on the entire dataset as an agnostic way.
 
 
-# Absolute uncertainty is not a fair metric for rejection in imbalanced clinical data. You have to judge a prediction's uncertainty relative to the baseline difficulty of its class. -> Thats why conditional rejection curves are more appropriate for clinical data.
+**Absolute uncertainty is not a fair metric for rejection in imbalanced clinical data. You have to judge a prediction's uncertainty relative to the baseline difficulty of its class. -> Thats why conditional rejection curves are more appropriate for clinical data.**
 
 # ADNI UNCERTANTY ANALYSIS
 - should we consider all augmented samples or only real baseline samples for the uncertainty analysis? Atm seems like only baseline samples provide better results in general. 
@@ -27,3 +27,10 @@ However if we consider class-condition rejection on the augmented model consider
 - Both analyses make sense to me. The first one is more general and the second one is more specific to the task of "baseline visit screening".
     - If we consider all augmented samples, we are essentially evaluating the model's uncertainty across the entire disease progression spectrum. Here we have to take into account weird distributions (?) 
     - if we consider only real baseline samples, we are evaluating the model's uncertainty specifically for the task of "baseline visit screening". This is a more focused analysis that directly assesses the model's performance on the most critical time point for early detection.
+
+
+
+# WHAT'S MISSING? 
+- The **Clinical Translation** (How does a doctor actually use this?)
+You have proven the math works, but clinical informatics papers require a "Translational Workflow." If a hospital buys your algorithm tomorrow, how does the UI/UX actually work for the physician? 
+    - What to add: A short paragraph defining the "Wait-and-See" Protocol. If a patient's uncertainty score exceeds the CCRC threshold, the AI does not output a diagnosis. Instead, it outputs: "Inconclusive: High Aleatoric Noise. Defer to clinical judgment or schedule a 6-month follow-up."
