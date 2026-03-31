@@ -4,7 +4,8 @@ import pandas as pd
 import os
 import pandas as pd
 
-def build_ensemble_csv(analysis_name, outcome_name, index_col='idx'):
+def build_ensemble_csv(analysis_name, outcome_name, index_col='idx', models_to_include=['randomforestclassifier', 'extratreesclassifier', 'xgbclassifier', 
+                                                                                        'logisticregression', 'svc']):
     base_path = f'../results/classification/{analysis_name}/{outcome_name}'
     all_data_list = []
 
@@ -18,7 +19,9 @@ def build_ensemble_csv(analysis_name, outcome_name, index_col='idx'):
             path_parts = root.split(os.sep)
             model_name = path_parts[-1]
             folder_outcome = path_parts[-2] # Renamed to avoid overwriting the function argument
-            
+            if model_name not in models_to_include:
+                print(f"Skipping {model_name} as it's not in the list of models to include.")
+                continue
             file_path = os.path.join(root, 'raw_results_calibration.csv')
             df = pd.read_csv(file_path)
             
