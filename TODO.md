@@ -3,11 +3,11 @@
 
 # ENSEMBLE METHODS
 - How to handle calibration? Do we need to use specific calibration settings for each ml model? 
-- check for adni training if the multi index effectively prevents data leakage (visits of the same patient should not be in train and test sets)
+- [x] check for adni training if the multi index effectively prevents data leakage (visits of the same patient should not be in train and test sets)
 
-- should we compare the results of the rolling window approach to a more traditional approach where we only use the baseline visit of each patient? This is to check if the rolling window approach is actually improving the performance of the models and the quality of the uncertainty measures.
+- [x] should we compare the results of the rolling window approach to a more traditional approach where we only use the baseline visit of each patient? This is to check if the rolling window approach is actually improving the performance of the models and the quality of the uncertainty measures.
 
-- Include month as a feature: If the model explicitly knows "this is a Month 0 visit" versus "this is a Month 18 visit," it can conditionally adjust its internal thresholds. It learns that a mild ADAS13 score at Month 0 is alarming, but the same score at Month 18 is expected.
+- [?] Include month as a feature: If the model explicitly knows "this is a Month 0 visit" versus "this is a Month 18 visit," it can conditionally adjust its internal thresholds. It learns that a mild ADAS13 score at Month 0 is alarming, but the same score at Month 18 is expected.
 
 # UNCERTAINTY ANALYSIS
 - After uncertainty decomposition, what are the next steps?
