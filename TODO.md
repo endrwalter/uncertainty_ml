@@ -52,7 +52,9 @@ These are the critical structural fixes required in your Python scripts to ensur
   - *Reason:* AUPRC is the mathematically optimal metric for highly imbalanced datasets (like the MS cohort) as it avoids the distortion caused by massive True Negative counts.
 - [ ] ** AUPRC Rfit for all considered datasets?**
    - ADNI data is balanced with respect to neuroart cohorts, should we consider another metric for the refit?
-     
+- [ ] **Refit the ADNI models using the new preprocessed data**
+    - *reason* We changed the preprocessing to account for missing values into gender and education (coded as -4 in the original dataset)
+
 ## Part 2: Manuscript & Methodological Defenses
 These are the critical narrative points that must be explicitly addressed in the Discussion or Limitations section of your paper to preempt reviewer critiques.
 
