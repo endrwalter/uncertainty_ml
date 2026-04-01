@@ -50,7 +50,9 @@ These are the critical structural fixes required in your Python scripts to ensur
 - [ ] **Document AUPRC Refitting:**
   - *Action:* Add comments in the code and explicitly state in the manuscript methodology that GridSearch refitting was optimized using Area Under the Precision-Recall Curve (AUPRC).
   - *Reason:* AUPRC is the mathematically optimal metric for highly imbalanced datasets (like the MS cohort) as it avoids the distortion caused by massive True Negative counts.
-
+- [ ] ** AUPRC Rfit for all considered datasets?**
+   - ADNI data is balanced with respect to neuroart cohorts, should we consider another metric for the refit?
+     
 ## Part 2: Manuscript & Methodological Defenses
 These are the critical narrative points that must be explicitly addressed in the Discussion or Limitations section of your paper to preempt reviewer critiques.
 
