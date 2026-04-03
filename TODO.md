@@ -10,13 +10,9 @@
 - [?] Include month as a feature: If the model explicitly knows "this is a Month 0 visit" versus "this is a Month 18 visit," it can conditionally adjust its internal thresholds. It learns that a mild ADAS13 score at Month 0 is alarming, but the same score at Month 18 is expected.
 
 # UNCERTAINTY ANALYSIS
-- After uncertainty decomposition, what are the next steps?
-    - Classification Rejection Curves using the different uncertainty measures (aleatoric, epistemic, total) and compare them to the baseline (random rejection curve).
-    - CRCs but discarding proportionally samples classified as 0 and classified as 1 (instead of discarding the most uncertain samples regardless of their predicted class). This is to check if the uncertainty measures are more effective at identifying misclassified samples in one class vs the other.
-
-    - Do we want to perform GMM clustering using clinical data (as we did for pd) to check if the uncertainty measures are more effective at identifying misclassified samples in one cluster vs the other? This is to check if the uncertainty measures are more effective at identifying misclassified samples in one cluster vs the other.
-
-    - Class condition rejection curves used on the entire dataset as an agnostic way.
+- After uncertainty decomposition, what are the next steps? Uncertainty measures are mathematically flawed (from recent literature). 
+    - Classification Rejection Curves using H total (only on total uncertainty (given that epistemic is ~ 0.1, better no not decompose H total in the end)) and compare them to the baseline (random rejection curve).
+    - Class condition rejection curves used on the entire dataset as an agnostic way (this ccrc method is a way to balance the problem of the "criticized" Information Theoretic framework of decomposed uncertainties).
 
 
 **Absolute uncertainty is not a fair metric for rejection in imbalanced clinical data. You have to judge a prediction's uncertainty relative to the baseline difficulty of its class. -> Thats why conditional rejection curves are more appropriate for clinical data.**
