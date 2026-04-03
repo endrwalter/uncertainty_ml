@@ -22,7 +22,7 @@ Tasks related to extracting metrics, running rejection curves, and generating th
     - **The Mechanism:** Use $H_{Total}$ for the actual CCRC sorting and rejection. (It is computationally pure, bypasses entanglement critiques, and acts as a clinical safety net for unseen Out-of-Distribution/Epistemic spikes).
     - **The Explanation:** Use $C_{Aleatoric}$ and the Phase Plane to *explain* the rejection in the paper (proving rejection is driven by asymmetric biological noise).
 - [ ] **Class-Conditioned Rejection Curves (CCRC):** Run CCRC tracking confusion matrix dynamics. Compare to Standard Global Rejection and Random Rejection baselines.
-- [ ] **ADNI Sample Scope Analysis:** Run uncertainty analysis on *all* augmented samples vs. *only* real baseline samples.
+- [x] **ADNI Sample Scope Analysis:** Run uncertainty analysis on *all* augmented samples vs. *only* real baseline samples.
     - *Note:* All augmented evaluates the full disease progression spectrum. Baseline-only evaluates the specific clinical task of "baseline screening." Compare both.
 - [ ] **Statistical Rejection Audit (Mann-Whitney U):** Run non-parametric tests comparing the uncertainty profiles ($H, C, I$) of the "Kept" vs. "Removed" cohorts to prove CCRC targets the statistical tails of *both* classes.
 
