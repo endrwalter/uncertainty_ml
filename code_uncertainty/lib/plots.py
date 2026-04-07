@@ -78,7 +78,7 @@ def plot_uncertainty_distributions(uncertainty_results, H_bl, save_path=None):
     plt.show()
 
 
-def plot_combined_uncertainty_analysis(uncertainty_df, y_true, save_path=None):
+def plot_combined_uncertainty_analysis(uncertainty_df, y_true, uncertainty_type = 'H_Total',save_path=None):
     # --- Configuration (Synchronized with Phenotype Template) ---
     border_width = 1.5
     base_fontsize = 10
@@ -184,7 +184,7 @@ def plot_combined_uncertainty_analysis(uncertainty_df, y_true, save_path=None):
     threshold = y_true.mean()  # or set to 0.5 if you want a fixed threshold
 
     y_pred_class = (uncertainty_df['mu'] > threshold).astype(int)
-    sorted_indices = uncertainty_df['H_Total'].sort_values(ascending=False).index
+    sorted_indices = uncertainty_df[uncertainty_type].sort_values(ascending=False).index
     rejection_rates = np.linspace(0, 0.80, 20)
     
     mcc_scores, sens_scores, spec_scores = [], [] ,[]
@@ -264,7 +264,7 @@ def plot_combined_uncertainty_analysis(uncertainty_df, y_true, save_path=None):
     plt.show()
 
 
-def plot_combined_uncertainty_analysis_v2(uncertainty_df, y_true, save_path=None):
+def plot_combined_uncertainty_analysis_v2(uncertainty_df, y_true, uncertainty_type='H_Total', save_path=None):
     # --- Configuration (Synchronized with Phenotype Template) ---
     border_width = 1.5
     base_fontsize = 10
@@ -379,7 +379,7 @@ def plot_combined_uncertainty_analysis_v2(uncertainty_df, y_true, save_path=None
     # Generate binary predictions using the custom clinical threshold
     y_pred_class = (uncertainty_df['mu'] > optimal_threshold).astype(int)
     
-    sorted_indices = uncertainty_df['H_Total'].sort_values(ascending=False).index
+    sorted_indices = uncertainty_df[uncertainty_type].sort_values(ascending=False).index
     rejection_rates = np.linspace(0, 0.80, 20)
     
     mcc_scores, sens_scores, spec_scores = [], [], []
