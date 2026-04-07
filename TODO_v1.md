@@ -51,3 +51,7 @@ Narrative points that must be explicitly addressed in the Discussion or Limitati
 - [ ] **The Clinical Translation (Wait-and-See Protocol):** Add a UI/UX paragraph for the physician. Explain that if a patient exceeds the CCRC threshold, the AI does not force a diagnosis. It outputs: *"Inconclusive: High Aleatoric Noise. Defer to clinical judgment or schedule advanced testing/follow-up."*
 
 - [ ] **Define Threshold Selection for Hospitals:** Clarify that a real-world clinic chooses the specific rejection cutoff (e.g., 25%) retrospectively on a validation set based on their specific risk tolerance and resource bandwidth (e.g., MRI availability).
+
+- [ ] **The "Unobserved Covariates" Defense:** Clarify the definition of Aleatoric uncertainty in a medical context. Explicitly state that what the model perceives as irreducible noise ($C$) is often just the limitation of its finite feature space. Defend the rejection mechanism as a necessary "clinical escalation" to a human physician who possesses a wider observational bandwidth and can interpret context beyond the recorded data.
+
+**Absolute uncertainty is not a fair metric for rejection in imbalanced clinical data. You have to judge a prediction's uncertainty relative to the baseline difficulty of its class. -> Thats why conditional rejection curves are more appropriate for clinical data.**
