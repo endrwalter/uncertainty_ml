@@ -27,7 +27,7 @@ Tasks related to extracting metrics, running rejection curves, and generating th
 - [ ] **Statistical Rejection Audit (Mann-Whitney U):** Run non-parametric tests comparing the uncertainty profiles ($H, C, I$) of the "Kept" vs. "Removed" cohorts to prove CCRC targets the statistical tails of *both* classes.
 
 ## PART 3: MANUSCRIPT NARRATIVE & DEFENSES
-Narrative points that must be explicitly addressed in the Discussion or Limitations sections to preempt SOTA critiques (Reviewer 2).
+Narrative points that must be explicitly addressed in the Discussion or Limitations sections to preempt SOTA critiques.
 
 - [ ] **The "SOTA Entanglement" Defense (Wimmer, de Jong):** Explicitly acknowledge that IT metrics ($H, C, I$) are mathematically entangled and flawed as absolute estimators. Argue that this entanglement is *exactly* why standard Global Rejection acts as a catastrophic minority-class deletion filter. 
 - [ ] **The "Ordinal vs. Absolute" Defense (Why CCRC works):** Defend CCRC by explaining it shifts reliance from the *absolute mathematical purity* of the uncertainty score to its *ordinal ranking* within a localized clinical trajectory (grading on a curve).
