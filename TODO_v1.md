@@ -59,3 +59,6 @@ In this work, we extract standard Information-Theoretic (IT) metrics commonly re
 Therefore, rather than treating these metrics as pure, absolute representations of 'chance' and 'knowledge', we operationalize them strictly according to their tangible clinical and statistical equivalents. We treat the Aleatoric estimator ($C$) as a proxy for biological statistical dispersion (the inherent signal-to-noise ratio of a specific clinical trajectory). Conversely, we treat the Epistemic estimator ($I$) strictly as a measure of procedural parameter uncertainty (disagreement across our heterogeneous ensemble due to finite training data). By mapping these ambiguous terms to precise statistical behaviors, we evaluate their downstream impact on clinical triage more rigorously. **
 
 - Absolute uncertainty is not a fair metric for rejection in imbalanced clinical data. You have to judge a prediction's uncertainty relative to the baseline difficulty of its class. -> Thats why conditional rejection curves are more appropriate for clinical data.
+
+## REFERENCES
+https://drive.google.com/drive/folders/1NbSmN30hiexNWipUxA2Yf_EMdpNSXEwd?usp=drive_link
