@@ -36,7 +36,7 @@ Narrative points that must be explicitly addressed in the Discussion or Limitati
 
 - [ ] **The "SOTA Entanglement" Defense (Wimmer, de Jong):**  Explicitly acknowledge that IT metrics ($H, C, I$) are mathematically flawed. Specifically detail the "Suppression Effect": because $H = C + I$, high Aleatoric noise ($C$) mathematically suppresses Epistemic uncertainty ($I$). Argue that this creates a "clinical blindspot": if doctors rely on $I$ to detect model failure, they will miss highly ambiguous Class 1 patients because their $I$ score is artificially crushed by biological noise.
 
-- [ ] **The "$H_{Total}$ Clinical Safety Net" Defense:** Defend the use of $H_{Total}$ by arguing that because $I$ is suppressed in the hardest cases, relying on disentangled metrics is clinically dangerous. $H_{Total}$ is the only mathematically pure metric that guarantees ambiguous patients are caught.
+- [ ] **The " $H_{Total}$ Clinical Safety Net" Defense:** Defend the use of $H_{Total}$ by arguing that because $I$ is suppressed in the hardest cases, relying on disentangled metrics is clinically dangerous. $H_{Total}$ is the only mathematically pure metric that guarantees ambiguous patients are caught.
 
 - [ ] **The "Ordinal vs. Absolute" Defense (Why CCRC works):** Defend CCRC by explaining it shifts reliance from the *absolute mathematical purity* of the uncertainty score to its *ordinal ranking* within a localized clinical trajectory (grading on a curve).
 
