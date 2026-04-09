@@ -65,5 +65,9 @@ Therefore, rather than treating these metrics as pure, absolute representations 
 - [ ] The "Missing Bias" Defense (Waegeman): Explicitly note that standard IT and ensemble estimators only capture procedural variance while ignoring estimation bias. Use this to further prove that relying on the absolute purity of an Epistemic score is mathematically invalid, thus cementing the necessity of CCRC's ordinal ranking.
 
 - [ ] Multimodal Escalation Protocol: Expand the "Clinical Triage" paragraph. Explain that Aleatoric uncertainty is only irreducible for the current feature space. Define the CCRC rejection threshold as a mathematical trigger for hospitals to authorize secondary, high-cost diagnostic modalities (e.g., MRI, PET scans) only for the patients whose biology requires it.
+
+### RESULTS
+- [ ] reason on a possible metric of net benefit based on dataset prior(balance of the dataset), task(interested in tp, tn, ..?), rejection percentage.
+  
 ## REFERENCES
 https://drive.google.com/drive/folders/1NbSmN30hiexNWipUxA2Yf_EMdpNSXEwd?usp=drive_link
