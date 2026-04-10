@@ -57,6 +57,11 @@ By tracking the exact transitions within the raw confusion matrix, a completely 
 While this balanced, proportional deferral may cause overall ratios like MCC to plateau or flatline (as seen in the MS cohort), the *composition* of the remaining patient cohort becomes vastly safer and more clinically actionable. Ultimately, CCRC demonstrates that a safe medical AI must know how to abstain from predicting inherently elusive clinical endpoints without mathematically erasing the disease class. A flatlining metric under class-conditioned rejection is not a failure; it is the mathematical signature of a rigorously calibrated and clinically safe model.
 
 ---
+#TODO
+### Main Findings (Across diseases), relative to the methodology
+- how the balance of the dataset is related to ccrc outcomes ..
+- ...
+- ..
 
 ## Repository Structure & Usage
 
