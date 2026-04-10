@@ -59,7 +59,10 @@ While this balanced, proportional deferral may cause overall ratios like MCC to 
 ---
 #TODO
 ### Main Findings (Across diseases), relative to the methodology
-- how the balance of the dataset is related to ccrc outcomes ..
+1. 
+2.
+..
+5. how the balance of the dataset is related to ccrc outcomes ..
 - ...
 - ..
 
