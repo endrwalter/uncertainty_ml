@@ -66,6 +66,7 @@ Therefore, rather than treating these metrics as pure, absolute representations 
 
 - [ ] Multimodal Escalation Protocol: Expand the "Clinical Triage" paragraph. Explain that Aleatoric uncertainty is only irreducible for the current feature space. Define the CCRC rejection threshold as a mathematical trigger for hospitals to authorize secondary, high-cost diagnostic modalities (e.g., MRI, PET scans) only for the patients whose biology requires it.
 
+- [ ] Future directions for Waegeman should consider both a bootstrap approach and an ensemble one to mitigate the and take into account the different sources of epistemic uncertainy
 ### RESULTS
 - [ ] reason on a possible metric of net benefit based on dataset prior(balance of the dataset), task(interested in tp, tn, ..?), rejection percentage.
   
