@@ -26,7 +26,6 @@ To ensure the pipeline is robust across varying degrees of biological noise and 
 * Multiple Sclerosis (Progression Independent of Relapse Activity): A severely imbalanced cohort testing CCRC as a mandatory rescue mechanism against systemic minority-class collapse.
 
 * Alzheimer’s Disease (36-Month MCI to AD Conversion): A balanced cohort testing CCRC's ability to act as a strict calibration enforcer.
-* 
 
 ### Main findings 
 **1. The Asymmetric Penalty of Clinical Uncertainty**
