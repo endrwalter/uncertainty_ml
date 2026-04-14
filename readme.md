@@ -1,6 +1,9 @@
 ## Research Concept
-Standard machine learning evaluation assumes that all predictive errors carry equal weight and that predictive uncertainty can be evaluated independently of the dataset's class prior. In clinical practice, this assumption fails catastrophically. To safely translate predictive models into actionable Clinical Decision Support Systems (CDSS), we implemented a four-step uncertainty-aware workflow:
+Standard machine learning evaluation assumes that all predictive errors carry equal weight and that predictive uncertainty can be evaluated independently of the dataset's class prior. In clinical practice, this assumption fails catastrophically. To safely translate predictive models into actionable Clinical Decision Support Systems (CDSS), we implemented the following workflow:
 
+**0. Dynamic Calibrated Ensemble Generation**
+
+The mathematical integrity of any uncertainty-based rejection system depends entirely on the reliability and depth of the underlying probability distributions. Because standard machine learning algorithms frequently produce uncalibrated outputs, the pipeline first enforces strict probability calibration via nested cross-validation and internal Sigmoid calibration (Platt scaling). Furthermore, because the test set composition shifts dynamically across 30 resampling iterations, each patient receives a variable-length ensemble of up to 150 calibrated predictions (spanning 5 distinct ML algorithms). This asynchronous ensemble approach captures both algorithmic variance and training-data variance, providing a highly robust, patient-specific distribution of probabilities that serves as the foundation for accurate entropy evaluation.
 **1. Uncertainty Quantification (Bypassing SOTA Entanglement)**
 
 Rather than relying on the absolute purity of mathematically entangled Information-Theoretic metrics (Aleatoric vs. Epistemic uncertainty), the workflow calculates Total Predictive Uncertainty ($H_{total}$). This captures both inherent biological noise and out-of-distribution anomalies while remaining robust in finite-data clinical regimes.
