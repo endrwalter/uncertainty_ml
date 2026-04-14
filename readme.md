@@ -59,12 +59,17 @@ While this balanced, proportional deferral may cause overall ratios like MCC to 
 ---
 #TODO
 ### Main Findings (Across diseases), relative to the methodology
-1. 
-2.
-..
+* **The Empirical Asymmetry of Clinical Uncertainty**
+Across multiple clinical forecasting domains, we observed that predictive uncertainty is structurally concentrated on the minority class. Because algorithms default toward the dataset's baseline prior in the presence of noisy biological features, minority-class predictions inherently carry higher baseline Shannon Entropy.
+* **Global Rejection Acts as a Naive Deletion Filter**
+Our analysis proves that applying a standard global rejection threshold to clinical data does not inherently isolate "bad" predictions. Because of the uncertainty asymmetry, global rejection acts as a naive minority-class deletion filter, systematically discarding the most difficult-to-predict patients and causing Sensitivity to artificially crash.
+* **Class-Conditioned Rejection (CCRC) Decouples Uncertainty from Prevalence**
+By enforcing proportional uncertainty thresholds conditioned on the predicted class, the CCRC algorithm successfully isolates uncertainty from the global class prior. The resulting bimodal uncertainty distributions of our discarded cohorts prove that CCRC successfully trims noisy predictions from both trajectories independently, preserving the rare disease class without requiring subjective mathematical weights.
+* **Dataset Balance as a Modulator of Rejection Dynamics**
+Our cross-disease application revealed that the clinical impact of CCRC is modulated by the baseline balance of the dataset. In highly imbalanced cohorts (e.g., Multiple Sclerosis, Parkinson's), CCRC acts as a critical rescue mechanism to prevent cohort collapse. In balanced cohorts (e.g., Alzheimer's), it acts as an optimization engine, symmetrically purging ambiguous predictions to drive global metrics toward near-perfect levels.
+* **and **
 5. how the balance of the dataset is related to ccrc outcomes ..
-- ...
-- ..
+
 
 ## Repository Structure & Usage
 
