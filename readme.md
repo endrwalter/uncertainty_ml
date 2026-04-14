@@ -58,26 +58,28 @@ While this balanced, proportional deferral may cause overall ratios like MCC to 
 
 ---
 #TODO
-### Main findings more related to the methodology
-* **Bypassing SOTA Entanglement to Operationalize Total Uncertainty**
-Current Information-Theoretic (IT) methods emphasize the theoretical disentanglement of Aleatoric ($C$) and Epistemic ($I$) uncertainty to guide model rejection. However, recent machine learning literature has grown increasingly skeptical of this decomposition, demonstrating that in finite-data regimes, these metrics are deeply entangled, unvalidated, and prone to generating misleading clinical assumptions. Given the unreliability of theoretical disentanglement, relying on Total Predictive Uncertainty ($H_{total}$) presents a structurally safer and more robust alternative. Yet, as our analysis reveals, raw $H_{total}$ harbors a critical and previously unrecognized flaw: applying global $H_{total}$ thresholds acts as a naive minority-class deletion filter. We demonstrate that CCRC provides a pragmatic, mathematically safe mechanism to operationalize $H_{total}$. By evaluating its ordinal ranking strictly within localized predicted classes, CCRC neutralizes this prior-driven bias. This allows models to safely discard the most ambiguous patients—bypassing the SOTA limitations of unreliable IT disentanglement entirely—without erasing the rare disease class.
-* **Redefining Algorithmic Failure: The "Flatlining" Paradox**
-A critical evaluation finding of this study is that standard global metrics (such as MCC) are dangerously misleading when evaluating clinical rejection protocols. In our severely imbalanced cohorts (e.g., Multiple Sclerosis), we observed that overall performance ratios mathematically plateaued or flatlined under CCRC. While standard machine learning literature traditionally interprets flatlining metrics as algorithmic failure, our analysis of the raw confusion matrix dynamics proves otherwise. The plateau occurred because CCRC proportionally removed False Positives (preventing toxic overtreatment) and False Negatives (preventing false reassurance) at equal rates. Therefore, we establish that a flatlining metric under class-conditioned rejection is not a failure; it is the mathematical signature of a rigorously calibrated model prioritizing a safer clinical cohort over inflated statistical ratios.
-* **The Scaling Law of Class Imbalance**
-The necessity and functional role of CCRC scale directly with the dataset's baseline class prior. In severely imbalanced datasets (e.g., MS at ~11% prior), CCRC acts as a mandatory Rescue Mechanism preventing the total collapse of Sensitivity. In moderately imbalanced datasets (e.g., PD at ~29%), it acts as a Stabilization Tool. In highly balanced datasets (e.g., Alzheimer's at ~54%), the risk of minority-class erasure disappears, and CCRC transitions into a pure Calibration Enforcer, perfectly synchronizing Sensitivity and Specificity by targeting Epistemic disagreement.
+### Main findings 
+1. The Asymmetric Penalty of Clinical Uncertainty
+Across multiple clinical forecasting domains, we observed that predictive uncertainty is structurally concentrated on the minority class. Because Bayesian algorithms default toward the dataset's baseline prior in the presence of ambiguous or noisy biological features, minority-class predictions require an exponentially higher standard of evidence to achieve confidence. Consequently, the minority class inherently carries higher baseline Shannon Entropy, even when data noise is equally distributed across both trajectories.
 
-### General findings
-* **The Empirical Asymmetry of Clinical Uncertainty**
-Across multiple clinical forecasting domains, we observed that predictive uncertainty is structurally concentrated on the minority class. Because algorithms default toward the dataset's baseline prior in the presence of noisy biological features, minority-class predictions inherently carry higher baseline Shannon Entropy.
-* **Global Rejection Acts as a Naive Deletion Filter**
+2. Global Rejection Acts as a Naive Deletion Filter
 Our analysis proves that applying a standard global rejection threshold to clinical data does not inherently isolate "bad" predictions. Because of the uncertainty asymmetry, global rejection acts as a naive minority-class deletion filter, systematically discarding the most difficult-to-predict patients and causing Sensitivity to artificially crash.
-* **Class-Conditioned Rejection (CCRC) Decouples Uncertainty from Prevalence**
-By enforcing proportional uncertainty thresholds conditioned on the predicted class, the CCRC algorithm successfully isolates uncertainty from the global class prior. The resulting bimodal uncertainty distributions of our discarded cohorts prove that CCRC successfully trims noisy predictions from both trajectories independently, preserving the rare disease class without requiring subjective mathematical weights.
-* **Dataset Balance as a Modulator of Rejection Dynamics**
-Our cross-disease application revealed that the clinical impact of CCRC is modulated by the baseline balance of the dataset. In highly imbalanced cohorts (e.g., Multiple Sclerosis, Parkinson's), CCRC acts as a critical rescue mechanism to prevent cohort collapse. In balanced cohorts (e.g., Alzheimer's), it acts as an optimization engine, symmetrically purging ambiguous predictions to drive global metrics toward near-perfect levels.
-* **and **
-5. how the balance of the dataset is related to ccrc outcomes ..
 
+3. Bypassing SOTA Entanglement to Operationalize Total Uncertainty
+While current Information-Theoretic (IT) methods emphasize disentangling Aleatoric and Epistemic uncertainty, recent literature demonstrates these metrics are deeply entangled in finite-data regimes. We demonstrate that CCRC provides a pragmatic, mathematically safe mechanism to operationalize Total Predictive Uncertainty ($H_{total}$). By evaluating ordinal ranking strictly within localized predicted classes, CCRC neutralizes prior-driven bias, allowing models to safely discard ambiguous patients without requiring unreliable IT disentanglement and without erasing the rare disease class.
+
+4. Redefining Algorithmic Failure: The "Flatlining" Paradox
+We establish that standard global metrics (such as MCC) are dangerously misleading when evaluating clinical rejection protocols. In severely imbalanced cohorts, overall performance ratios mathematically plateaued under CCRC. While standard literature interprets flatlining metrics as algorithmic failure, our analysis of raw confusion matrix dynamics proves this plateau occurs because CCRC proportionally removes False Positives (preventing toxic overtreatment) and False Negatives (preventing false reassurance) at equal rates. A flatlining metric under CCRC is the mathematical signature of a rigorously calibrated model prioritizing clinical safety over inflated statistical ratios.
+
+5. The Scaling Law of Class Imbalance (This consolidates your three redundant points)
+Our cross-disease application revealed that the clinical necessity and functional role of CCRC scale directly with the baseline balance of the dataset.
+
+- In severely imbalanced datasets (e.g., MS at ~11% prior), CCRC acts as a mandatory Rescue Mechanism to prevent the total collapse of Sensitivity.
+- In moderately imbalanced datasets (e.g., PD at ~29%), it acts as a Stabilization Tool.
+- In highly balanced datasets (e.g., Alzheimer's at ~54%), the risk of minority-class erasure disappears, and CCRC transitions into an Optimization Engine, perfectly synchronizing Sensitivity and Specificity by targeting Epistemic disagreement.
+
+6. Operationalizing the Clinical "Abstain" Option (The Missing Addition)
+Ultimately, CCRC transitions predictive models from rigid binary classifiers into safe Clinical Decision Support Systems (CDSS). By accurately bounding uncertainty without destroying class integrity, the framework provides a mathematically rigorous mechanism for models to "abstain" from prediction. Deferring the top 20-30% of class-conditioned ambiguous cases to secondary screening or "watchful waiting" represents the necessary operational blueprint for deploying AI in high-stakes, noisy biological environments.
 
 ## Repository Structure & Usage
 
