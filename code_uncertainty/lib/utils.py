@@ -3,12 +3,21 @@ import numpy as np
 import pandas as pd
 
 
-def compute_uncertainties(probas_df):
+def compute_uncertainties(probas_df, tau=None):
     """
     Computes H (Total), C (Aleatoric), and I (Epistemic) uncertainty.
+    
+    - probas_df: DataFrame containing model probabilities and optionally 'label'.
+    - tau: The optimal decision threshold. If None, defaults to the empirical prior.
     """
     eps = 1e-12
-    
+
+    if tau is None:
+        if 'label' in probas_df.columns:
+            tau = probas_df['label'].mean() # Empirical Prior
+        else:
+            tau = 0.5 # Fallback to standard balanced threshold
+
     # Ensure we only compute on probabilities
     prob_cols = [c for c in probas_df.columns if c not in ['idx', 'label', 'PatientID']]
     probs = probas_df[prob_cols].values
@@ -30,11 +39,15 @@ def compute_uncertainties(probas_df):
     
     # 4. Epistemic Uncertainty (I)
     I = H - C
+
+    # 5. Decision-Theoretic Uncertainty
+    distance_to_tau = np.abs(mean_scaled_probs - tau)
     
     return pd.DataFrame({
         'H_Total': H, 
         'C_Aleatoric': C, 
         'I_Epistemic': I, 
+        'Distance_to_Tau': distance_to_tau,
         'Final_Calibrated_Prob': mean_scaled_probs
     }, index=probas_df.index)
 
@@ -61,6 +74,10 @@ def extract_and_analyze_rejection(df, prior_threshold, rate, method='class_condi
     # Generate predictions using the baseline prior
     if 'y_pred' not in df.columns:
         df['y_pred'] = (df[prob_col] >= prior_threshold).astype(int)
+    
+    if sort_col == "Distance_to_Tau":
+        # invert the distance to tau for sorting (we want to drop those closest to tau first)
+        df['Distance_to_Tau'] = -df['Distance_to_Tau']
         
     # ---------------------------------------------------------
     # 1. Split the Data based on Rejection Method
