@@ -36,7 +36,7 @@ Narrative points that must be explicitly addressed in the Discussion or Limitati
 
 - [ ] **The "SOTA Entanglement" Defense (Wimmer, de Jong):**  Explicitly acknowledge that IT metrics ($H, C, I$) are mathematically flawed. Specifically detail the "Suppression Effect": because $H = C + I$, high Aleatoric noise ($C$) mathematically suppresses Epistemic uncertainty ($I$). Argue that this creates a "clinical blindspot": if doctors rely on $I$ to detect model failure, they will miss highly ambiguous Class 1 patients because their $I$ score is artificially crushed by biological noise.
 
-- [ ] **The "$H_{Total}$ Clinical Safety Net" Defense:** Defend the use of $H_{Total}$ by arguing that because $I$ is suppressed in the hardest cases, relying on disentangled metrics is clinically dangerous. $H_{Total}$ is the only mathematically pure metric that guarantees ambiguous patients are caught.
+- [ ] **The " $H_{Total}$ Clinical Safety Net" Defense:** Defend the use of $H_{Total}$ by arguing that because $I$ is suppressed in the hardest cases, relying on disentangled metrics is clinically dangerous. $H_{Total}$ is the only mathematically pure metric that guarantees ambiguous patients are caught.
 
 - [ ] **The "Ordinal vs. Absolute" Defense (Why CCRC works):** Defend CCRC by explaining it shifts reliance from the *absolute mathematical purity* of the uncertainty score to its *ordinal ranking* within a localized clinical trajectory (grading on a curve).
 
@@ -54,4 +54,21 @@ Narrative points that must be explicitly addressed in the Discussion or Limitati
 
 - [ ] **The "Unobserved Covariates" Defense:** Clarify the definition of Aleatoric uncertainty in a medical context. Explicitly state that what the model perceives as irreducible noise ($C$) is often just the limitation of its finite feature space. Defend the rejection mechanism as a necessary "clinical escalation" to a human physician who possesses a wider observational bandwidth and can interpret context beyond the recorded data. --> **idea of Model-Bounded Aleatoric Noise**
 
-**Absolute uncertainty is not a fair metric for rejection in imbalanced clinical data. You have to judge a prediction's uncertainty relative to the baseline difficulty of its class. -> Thats why conditional rejection curves are more appropriate for clinical data.**
+- **A Note on Uncertainty Terminology**
+In this work, we extract standard Information-Theoretic (IT) metrics commonly referred to in the machine learning literature as 'Aleatoric' ($C$) and 'Epistemic' ($I$) uncertainty. However, aligning with recent critiques by Bickford-Smith & van der Wilk (2025), we recognize that this traditional dichotomy is often insufficiently expressive and conflates distinct mathematical quantities.
+Therefore, rather than treating these metrics as pure, absolute representations of 'chance' and 'knowledge', we operationalize them strictly according to their tangible clinical and statistical equivalents. We treat the Aleatoric estimator ($C$) as a proxy for biological statistical dispersion (the inherent signal-to-noise ratio of a specific clinical trajectory). Conversely, we treat the Epistemic estimator ($I$) strictly as a measure of procedural parameter uncertainty (disagreement across our heterogeneous ensemble due to finite training data). By mapping these ambiguous terms to precise statistical behaviors, we evaluate their downstream impact on clinical triage more rigorously. **
+
+- Absolute uncertainty is not a fair metric for rejection in imbalanced clinical data. You have to judge a prediction's uncertainty relative to the baseline difficulty of its class. -> Thats why conditional rejection curves are more appropriate for clinical data.
+
+
+**Based on Waegeman Lecture (https://www.youtube.com/watch?v=Q64FEk5wfQw)**
+- [ ] The "Missing Bias" Defense (Waegeman): Explicitly note that standard IT and ensemble estimators only capture procedural variance while ignoring estimation bias. Use this to further prove that relying on the absolute purity of an Epistemic score is mathematically invalid, thus cementing the necessity of CCRC's ordinal ranking.
+
+- [ ] Multimodal Escalation Protocol: Expand the "Clinical Triage" paragraph. Explain that Aleatoric uncertainty is only irreducible for the current feature space. Define the CCRC rejection threshold as a mathematical trigger for hospitals to authorize secondary, high-cost diagnostic modalities (e.g., MRI, PET scans) only for the patients whose biology requires it.
+
+- [ ] Future directions for Waegeman should consider both a bootstrap approach and an ensemble one to mitigate the and take into account the different sources of epistemic uncertainy
+### RESULTS
+- [ ] reason on a possible metric of net benefit based on dataset prior(balance of the dataset), task(interested in tp, tn, ..?), rejection percentage.
+  
+## REFERENCES
+https://drive.google.com/drive/folders/1NbSmN30hiexNWipUxA2Yf_EMdpNSXEwd?usp=drive_link
