@@ -22,8 +22,15 @@ This pipeline has been validated across three distinct neurological prognostic t
 2. **Uncertainty Computation (`compute_uncertainties`)**: Expands raw probability arrays and calculates entropy-based metrics.
 3. **Baseline Risk Calculation**: Computes the dataset-specific baseline entropy ($H_{bl}$) to contextualize model confidence.
 4. **Clinical Clustering (Optional)**: Attempts GMM/PCA clustering to identify latent phenotypes (can be bypassed if clinical separation is poor).
-5. **Class-Conditioned Rejection (CCRC)**: Sweeps rejection rates (0% to 80%) conditionally based on the optimal prior threshold.
+5. **Class-Conditioned Rejection (CCRC)**: Sweeps rejection rates (0% to 80%) conditionally based on the optimal prior threshold. (comparison with global rejection, note that rejection analysis can be performed with any uncertainty metric)
 6. **Rejection Extraction**: Isolates the "kept" vs. "removed" cohorts at a specific clinical operating point (e.g., 25% rejection) for side-by-side biomarker analysis.
+
+## Uncertainty Metrics
+- **$C_{Aleatoric}$**: Captures inherent data noise, reflecting the irreducible uncertainty in the clinical features. (do not trust this metric alone for rejection)
+- **$I_{Epistemic}$**: Quantifies model ignorance, indicating how much the ensemble disagrees on a given prediction. (do not trust this metric alone for rejection)
+- **$H_{Total}$**: The combined uncertainty, representing the overall confidence of the model's prediction.
+- **$H_{bl}$**: The baseline entropy of the dataset, serving as a reference point for interpreting uncertainty values.
+- **$MW_{H_{Total}}$**: Margin-Weighted Total Uncertainty, which adjusts $H_{Total}$ by the distance to the decision threshold, providing a more clinically relevant uncertainty measure for rejection decisions. (decision threshold could be the prior probability of the positive class, suboptimal)
 
 ## Usage
 Modify the `MAIN SETTINGS` block in the script to target your specific dataset and outcome:
