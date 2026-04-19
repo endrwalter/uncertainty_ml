@@ -57,3 +57,7 @@ Possible hypotheses:
 Type 4: mixed phenotype (some features suggest progression, others stability)
 Type 3: noisy measurements but consistent trajectory
 Type 2: sub-threshold but drifting toward progression
+
+
+
+https://claude.ai/chat/5f77b174-4675-44b5-add9-f7b9f0aee865
