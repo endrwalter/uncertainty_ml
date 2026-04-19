@@ -1,4 +1,6 @@
 """ Uncertainty Computation Functions """
+from math import tau
+
 import numpy as np
 import pandas as pd
 
@@ -40,14 +42,18 @@ def compute_uncertainties(probas_df, tau=None):
     # 4. Epistemic Uncertainty (I)
     I = H - C
 
-    # 5. Decision-Theoretic Uncertainty
-    distance_to_tau = np.abs(mean_scaled_probs - tau)
-    
+    # 5. weighted mean Decision-Theoretic Uncertainty
+    distance_to_tau = np.abs(mean_scaled_probs - tau) 
+
+    # 3. Margin-weighted total uncertainty (# total uncertainty amplified by decision risk)
+    mw_H = H / (distance_to_tau + 0.01)
+
     return pd.DataFrame({
         'H_Total': H, 
         'C_Aleatoric': C, 
         'I_Epistemic': I, 
         'Distance_to_Tau': distance_to_tau,
+        'MW_H_Total': mw_H,
         'Final_Calibrated_Prob': mean_scaled_probs
     }, index=probas_df.index)
 
