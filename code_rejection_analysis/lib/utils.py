@@ -48,12 +48,17 @@ def compute_uncertainties(probas_df, tau=None):
     # 3. Margin-weighted total uncertainty (# total uncertainty amplified by decision risk)
     mw_H = H / (distance_to_tau + 0.01)
 
+    # 7. Margin-weighted ensemble std deviation (captures how much the ensemble disagrees, weighted by decision risk)
+    mw_std = np.nanstd(probs, axis=1) / (distance_to_tau + 0.01)
+
+
     return pd.DataFrame({
         'H_Total': H, 
         'C_Aleatoric': C, 
         'I_Epistemic': I, 
         'Distance_to_Tau': distance_to_tau,
         'MW_H_Total': mw_H,
+        'MW_Std': mw_std,
         'Final_Calibrated_Prob': mean_scaled_probs
     }, index=probas_df.index)
 
