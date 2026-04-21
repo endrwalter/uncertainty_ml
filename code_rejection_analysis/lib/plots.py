@@ -67,6 +67,23 @@ def plot_uncertainty_distributions(uncertainty_results, H_bl, save_path=None):
     # Adjust layout so titles and labels don't overlap
     plt.tight_layout()
 
+    # ----------------------------------------------------------
+    # 4. Tau-relative entropy (H_Tau)
+    if 'H_Tau' in uncertainty_results.columns:
+        plt.figure(figsize=(6, 5))
+        sns.histplot(uncertainty_results['H_Tau'], bins=50, kde=True, 
+                     color='teal', edgecolor='black', alpha=0.7)
+        axes[2].axvline(0, color='green', linestyle='--', linewidth=2, 
+                        label='Perfect Agreement (H_Tau=0)')
+        axes[2].axvline(H_bl, color='red', linestyle='--', linewidth=2, 
+                        label=f'Baseline Entropy (H_bl={H_bl:.3f})')
+        plt.title('Tau-relative Entropy (H_Tau)', fontsize=14)
+        plt.xlabel('Tau-relative Entropy (H_Tau)', fontsize=12)
+        plt.ylabel('Frequency', fontsize=12)
+        plt.legend()
+        plt.grid(axis='y', linestyle='--', alpha=0.3)
+        plt.tight_layout()
+
     # Save the figure if a path is provided
     if save_path:
         # Create directory if it doesn't exist

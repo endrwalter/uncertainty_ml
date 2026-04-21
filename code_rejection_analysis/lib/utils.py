@@ -4,6 +4,23 @@ from math import tau
 import numpy as np
 import pandas as pd
 
+def tau_relative_entropy(p, tau, eps=1e-10):
+    """
+    Entropy that peaks at tau instead of 0.5
+    """
+    # Rescale probability space
+    if p < tau:
+        # Map [0, tau] → [0, 0.5]
+        p_rescaled = 0.5 * (p / tau)
+    else:
+        # Map [tau, 1] → [0.5, 1]
+        p_rescaled = 0.5 + 0.5 * ((p - tau) / (1 - tau))
+    
+    # Standard binary entropy on rescaled p
+    p_rescaled = np.clip(p_rescaled, eps, 1-eps)
+    H_tau = -p_rescaled * np.log2(p_rescaled) - (1-p_rescaled) * np.log2(1-p_rescaled)
+    
+    return H_tau
 
 def compute_uncertainties(probas_df, tau=None):
     """
@@ -45,12 +62,14 @@ def compute_uncertainties(probas_df, tau=None):
     # 5. weighted mean Decision-Theoretic Uncertainty
     distance_to_tau = np.abs(mean_scaled_probs - tau) 
 
-    # 3. Margin-weighted total uncertainty (# total uncertainty amplified by decision risk)
+    # 6. Margin-weighted total uncertainty (# total uncertainty amplified by decision risk)
     mw_H = H / (distance_to_tau + 0.01)
 
     # 7. Margin-weighted ensemble std deviation (captures how much the ensemble disagrees, weighted by decision risk)
     mw_std = np.nanstd(probs, axis=1) / (distance_to_tau + 0.01)
 
+    # 8. Tau-relative entropy
+    H_tau = np.array([tau_relative_entropy(p, tau) for p in mean_scaled_probs])
 
     return pd.DataFrame({
         'H_Total': H, 
@@ -59,6 +78,7 @@ def compute_uncertainties(probas_df, tau=None):
         'Distance_to_Tau': distance_to_tau,
         'MW_H_Total': mw_H,
         'MW_Std': mw_std,
+        'H_Tau': H_tau,
         'Final_Calibrated_Prob': mean_scaled_probs
     }, index=probas_df.index)
 
