@@ -84,6 +84,40 @@ def plot_uncertainty_distributions(uncertainty_results, H_bl, save_path=None):
         plt.grid(axis='y', linestyle='--', alpha=0.3)
         plt.tight_layout()
 
+
+    if 'imbalance_aware_margin' in uncertainty_results.columns:
+        # plot the imbalance-aware uncertainty distribution
+        plt.figure(figsize=(6, 5))
+        sns.histplot(uncertainty_results['imbalance_aware_margin'], bins=50, kde=True, 
+                        color='coral', edgecolor='black', alpha=0.7)
+        axes[2].axvline(0, color='green', linestyle='--', linewidth=2,
+                        label='Ideal Balanced Certainty (H=0)')
+        axes[2].axvline(H_bl, color='red', linestyle='--', linewidth=2,
+                        label=f'Baseline Entropy (H_bl={H_bl:.3f})')
+        plt.title('Imbalance-Aware margin', fontsize=14)
+        plt.xlabel('Imbalance-Aware margin', fontsize=12)
+        plt.ylabel('Frequency', fontsize=12)
+        plt.legend()
+        plt.grid(axis='y', linestyle='--', alpha=0.3)
+        plt.tight_layout()
+
+    if 'imbalance_aware_uncertainty' in uncertainty_results.columns:
+        # plot the imbalance-aware uncertainty distribution
+        plt.figure(figsize=(6, 5))
+        sns.histplot(uncertainty_results['imbalance_aware_uncertainty'], bins=50, kde=True, 
+                        color='coral', edgecolor='black', alpha=0.7)
+        axes[2].axvline(0, color='green', linestyle='--', linewidth=2,
+                        label='Ideal Balanced Certainty (H=0)')
+        axes[2].axvline(H_bl, color='red', linestyle='--', linewidth=2,
+                        label=f'Baseline Entropy (H_bl={H_bl:.3f})')
+        plt.title('Imbalance-Aware Uncertainty', fontsize=14)
+        plt.xlabel('Imbalance-Aware Uncertainty', fontsize=12)
+        plt.ylabel('Frequency', fontsize=12)
+        plt.legend()
+        plt.grid(axis='y', linestyle='--', alpha=0.3)
+        plt.tight_layout()
+
+
     # Save the figure if a path is provided
     if save_path:
         # Create directory if it doesn't exist
@@ -215,7 +249,7 @@ def plot_combined_uncertainty_analysis_v2(uncertainty_df, y_true, uncertainty_ty
     # Extract the sorting metric safely without altering the original dataframe
     sort_series = uncertainty_df[uncertainty_type].copy()
     
-    if uncertainty_type == "Distance_to_Tau":
+    if uncertainty_type in ["Distance_to_Tau", "imbalance_aware_margin"]:
         # Invert only the temporary series so we drop those closest to tau first
         sort_series = -sort_series
 
@@ -309,9 +343,9 @@ def plot_class_conditioned_rejection_curve(df, threshold, uncertainty_col='H_Tot
     """
     results = []
     df = df.copy()
-    if uncertainty_col == "Distance_to_Tau":
+    if uncertainty_col in ["Distance_to_Tau", "imbalance_aware_margin"]:
     # invert the distance to tau for sorting (we want to drop those closest to tau first)
-        df['Distance_to_Tau'] = -df['Distance_to_Tau']
+        df[uncertainty_col] = -df[uncertainty_col]
     
     # Generate predictions using your calculated clinical baseline prior
     if 'y_pred' not in df.columns:
@@ -423,8 +457,9 @@ def plot_class_conditioned_rejection_curve(df, threshold, uncertainty_col='H_Tot
     print("="*95)
 
     # reverting the distance to tau back to its original form in case it was modified for sorting
-    if uncertainty_col == "Distance_to_Tau":
-        df['Distance_to_Tau'] = -df['Distance_to_Tau']
+    if uncertainty_col in ["Distance_to_Tau", "imbalance_aware_margin"]:
+    # invert the distance to tau for sorting (we want to drop those closest to tau first)
+        df[uncertainty_col] = -df[uncertainty_col]
     
     return results_df
 
@@ -438,9 +473,9 @@ def plot_comprehensive_rejection_dashboard(df, threshold, prob_col='Final_Calibr
     results = []
     df = df.copy()
 
-    if uncertainty_col == "Distance_to_Tau":
+    if uncertainty_col in ["Distance_to_Tau", "imbalance_aware_margin"]:
     # invert the distance to tau for sorting (we want to drop those closest to tau first)
-        df['Distance_to_Tau'] = -df['Distance_to_Tau']
+        df[uncertainty_col] = -df[uncertainty_col]
 
     # Standardize probability column names
     if prob_col not in df.columns and 'mu' in df.columns:
@@ -544,8 +579,9 @@ def plot_comprehensive_rejection_dashboard(df, threshold, prob_col='Final_Calibr
     plt.show()
 
         # reverting the distance to tau back to its original form in case it was modified for sorting
-    if uncertainty_col == "Distance_to_Tau":
-        df['Distance_to_Tau'] = -df['Distance_to_Tau']
+    if uncertainty_col in ["Distance_to_Tau", "imbalance_aware_margin"]:
+    # invert the distance to tau for sorting (we want to drop those closest to tau first)
+        df[uncertainty_col] = -df[uncertainty_col]
 
     return results_df
 

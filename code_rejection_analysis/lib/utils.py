@@ -4,6 +4,75 @@ from math import tau
 import numpy as np
 import pandas as pd
 
+def H_tau_imbalance_aware(p, tau, alpha=None, eps=1e-10):
+    """
+    Imbalance-aware entropy with bounded [0,1] output
+    
+    Parameters:
+    - p: predicted probability  
+    - tau: decision threshold (typically = prior)
+    - alpha: asymmetry parameter (default: imbalance ratio)
+    """
+    if alpha is None:
+        # Default: use imbalance ratio
+        alpha = (1 - tau) / tau
+    
+    # Standard symmetric H_tau
+    if p < tau:
+        p_rescaled = 0.5 * (p / tau)
+    else:
+        p_rescaled = 0.5 + 0.5 * ((p - tau) / (1 - tau))
+    
+    p_rescaled = np.clip(p_rescaled, eps, 1-eps)
+    H_base = -p_rescaled * np.log2(p_rescaled + eps) - (1-p_rescaled) * np.log2(1-p_rescaled + eps)
+    
+    # Asymmetric weighting
+    distance = np.abs(p - tau)
+    
+    if p >= tau:
+        # Minority side: weight increases with distance
+        # Linear model: weight = 1 + alpha * (distance / (1-tau))
+        # This gives weight=1 at tau, weight=1+alpha at p=1
+        weight = 1 + alpha * (distance / (1 - tau))
+    else:
+        # Majority side: constant weight
+        weight = 1.0
+    
+    # Weighted entropy
+    H_weighted = H_base * weight
+    
+    # Normalize to [0, 1]
+    # Max possible value is H_base=1.0 * weight_max=(1+alpha)
+    H_normalized = H_weighted / (1 + alpha)
+    
+    return H_normalized
+
+
+def imbalance_aware_margin(p, tau, prior, eps=0.01):
+    """
+    Asymmetric uncertainty that accounts for differential sampling
+    
+    Parameters:
+    - p: predicted probability
+    - tau: decision threshold (typically equals prior)
+    - prior: baseline disease prevalence
+    """
+    margin = np.abs(p - tau)
+    
+    # Compute imbalance ratio
+    imbalance_ratio = (1 - prior) / prior
+    
+    # Weight minority-class predictions by imbalance
+    if p >= tau:
+        # Positive side (minority): amplify uncertainty
+        weight = imbalance_ratio
+    else:
+        # Negative side (majority): standard weight
+        weight = 1.0
+    
+    return weight / (margin + eps)
+
+
 def tau_relative_entropy(p, tau, eps=1e-10):
     """
     Entropy that peaks at tau instead of 0.5
@@ -62,8 +131,6 @@ def compute_uncertainties(probas_df, tau=None):
     # 5. weighted mean Decision-Theoretic Uncertainty
     distance_to_tau = np.abs(mean_scaled_probs - tau) 
 
-    # 6. Margin-weighted total uncertainty (# total uncertainty amplified by decision risk)
-    mw_H = H / (distance_to_tau + 0.01)
 
     # 7. Margin-weighted ensemble std deviation (captures how much the ensemble disagrees, weighted by decision risk)
     mw_std = np.nanstd(probs, axis=1) / (distance_to_tau + 0.01)
@@ -71,15 +138,24 @@ def compute_uncertainties(probas_df, tau=None):
     # 8. Tau-relative entropy
     H_tau = np.array([tau_relative_entropy(p, tau) for p in mean_scaled_probs])
 
+
+    # 9. asymmetric imbalance-aware margin
+    imbalance_aware_margin_ = np.array([imbalance_aware_margin(p, tau, tau) for p in mean_scaled_probs])
+
+    # 10. asymmetric imbalance-aware uncertainty 
+    imbalance_aware_uncertainty = np.array([H_tau_imbalance_aware(p, tau) for p in mean_scaled_probs])
+
     return pd.DataFrame({
         'H_Total': H, 
         'C_Aleatoric': C, 
         'I_Epistemic': I, 
         'Distance_to_Tau': distance_to_tau,
-        'MW_H_Total': mw_H,
         'MW_Std': mw_std,
         'H_Tau': H_tau,
+        'imbalance_aware_margin': imbalance_aware_margin_,
+        'imbalance_aware_uncertainty': imbalance_aware_uncertainty,
         'Final_Calibrated_Prob': mean_scaled_probs
+
     }, index=probas_df.index)
 
 
