@@ -5,13 +5,16 @@ Standard machine learning evaluation assumes that all predictive errors carry eq
 
 The mathematical integrity of any uncertainty-based rejection system depends entirely on the reliability and depth of the underlying probability distributions. Because standard machine learning algorithms frequently produce uncalibrated outputs, the pipeline first enforces strict probability calibration via nested cross-validation and internal Sigmoid calibration (Platt scaling). Furthermore, because the test set composition shifts dynamically across 30 resampling iterations, each patient receives a variable-length ensemble of up to 150 calibrated predictions (spanning 5 distinct ML algorithms). This asynchronous ensemble approach captures both algorithmic variance and training-data variance, providing a highly robust, patient-specific distribution of probabilities that serves as the foundation for accurate entropy evaluation.
 
-**1. Uncertainty Quantification (Bypassing SOTA Entanglement)**
+**1. Uncertainty Quantification**
 
 Rather than relying on the absolute purity of mathematically entangled Information-Theoretic metrics (Aleatoric vs. Epistemic uncertainty), the workflow calculates Total Predictive Uncertainty ($H_{total}$). This captures both inherent biological noise and out-of-distribution anomalies while remaining robust in finite-data clinical regimes.
+ - NEW : Standard Shannon binary entropy is mathematically perfect, but its physical assumption is that maximum ambiguity always occurs at $p = 0.5$. In clinical datasets with extreme class imbalance, the baseline prior can be as low as 10-20%, meaning maximum ambiguity occurs at $p = 0.1$ or $p = 0.2$. Instead of inventing a completely new entropy formula, $H_\tau$ works by taking the asymmetric clinical probability space and warping it so that the clinical boundary ($\tau$) sits exactly at the physical center ($0.5$). Once the space is mathematically centered, we simply apply standard Shannon entropy.
 
 **2. Class-Conditioned Rejection (CCRC)**
+- NEW :
+To prevent global uncertainty thresholds from acting as a naive minority-class deletion filter, the workflow utilizes Class-Conditioned Rejection Curves (CCRC). By evaluating the ordinal ranking of $H_{\tau}$ strictly within localized predicted classes, CCRC applies proportional rejection thresholds. This neutralizes prior-driven bias and safely defers ambiguous patients without mathematically erasing the disease class.
 
-To prevent global uncertainty thresholds from acting as a naive minority-class deletion filter, the workflow utilizes Class-Conditioned Rejection Curves (CCRC). By evaluating the ordinal ranking of $H_{total}$ strictly within localized predicted classes, CCRC applies proportional rejection thresholds. This neutralizes prior-driven bias and safely defers ambiguous patients without mathematically erasing the disease class.
+ - we compare CCRC + $H_\{tau}$ against a global rejection protocol and against a margin-based rejection protocol (which is the current SOTA method for operationalizing Epistemic uncertainty). We demonstrate that CCRC + $H_\{tau}$ is the only method that can safely discard ambiguous patients without erasing the minority class, while also achieving stable overall performance across all three clinical scenarios. 
 
 **3. Clinical Evaluation via Confusion Matrix Dynamics**
 
