@@ -1,8 +1,13 @@
-""" Uncertainty Computation Functions """
-from math import tau
-
 import numpy as np
 import pandas as pd
+import os
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.metrics import precision_recall_curve, auc, confusion_matrix
+import warnings
+warnings.filterwarnings('ignore') # Suppress warnings when classes are completely erased
+
+
 
 def H_tau_imbalance_aware(p, tau, alpha=None, eps=1e-10):
     """
@@ -156,9 +161,6 @@ def compute_uncertainties(probas_df, global_stats, tau=None):
 
     return uncertainty_metrics, tau
 
-import os
-import matplotlib.pyplot as plt
-import seaborn as sns
 
 def plot_uncertainty_distributions(uncertainty_results, metrics_to_plot=None, H_bl=None, save_path=None):
     """
@@ -232,3 +234,148 @@ def plot_uncertainty_distributions(uncertainty_results, metrics_to_plot=None, H_
 
     # Display the plot
     plt.show()
+
+
+
+
+
+def compute_ablation_metrics(y_true, y_prob, tau, metric_scores, reject_rates, mode='global'):
+    """
+    Simulates triage using either Global Rejection or Class-Conditioned Rejection (CCRC).
+    Assumes metric_scores are aligned so that HIGHER values = MORE UNCERTAIN.
+    """
+    results = []
+    
+    # Get baseline predictions based on the optimal threshold
+    base_preds = (y_prob >= tau).astype(int)
+    
+    for rate in reject_rates:
+        if rate >= 1.0: 
+            continue # Cannot evaluate if 100% of patients are rejected
+            
+        if mode == 'global':
+            # --- GLOBAL REJECTION ---
+            # Find the global cutoff (e.g. for 20% rejection, find the 80th percentile)
+            # Keep patients strictly below this uncertainty cutoff
+            cutoff_val = np.percentile(metric_scores, 100 * (1 - rate))
+            keep_mask = metric_scores <= cutoff_val
+            
+        elif mode == 'ccrc':
+            # --- CLASS-CONDITIONED REJECTION (CCRC) ---
+            # Evaluate uncertainty ordinally within the predicted trajectories
+            keep_mask = np.zeros_like(y_true, dtype=bool)
+            
+            for c in [0, 1]:
+                class_idx = (base_preds == c)
+                if np.sum(class_idx) > 0:
+                    class_scores = metric_scores[class_idx]
+                    # Find the cutoff strictly for this specific class
+                    class_cutoff = np.percentile(class_scores, 100 * (1 - rate))
+                    # Keep patients in this class who are below their own uncertainty cutoff
+                    keep_mask[class_idx] = metric_scores[class_idx] <= class_cutoff
+        
+        # Filter the cohort
+        y_true_kept = y_true[keep_mask]
+        y_prob_kept = y_prob[keep_mask]
+        preds_kept = base_preds[keep_mask]
+        
+        # --- CALCULATE CLINICAL METRICS ON RETAINED PATIENTS ---
+        if len(np.unique(y_true_kept)) < 2:
+            # If a class is completely erased, metrics collapse
+            sens, spec, auprc = 0.0, 0.0, 0.0
+        else:
+            tn, fp, fn, tp = confusion_matrix(y_true_kept, preds_kept, labels=[0, 1]).ravel()
+            sens = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+            spec = tn / (tn + fp) if (tn + fp) > 0 else 0.0
+            
+            precision, recall, _ = precision_recall_curve(y_true_kept, y_prob_kept)
+            auprc = auc(recall, precision)
+            
+        results.append({
+            'Reject_Rate': rate,
+            'Sensitivity': sens,
+            'Specificity': spec,
+            'AUPRC': auprc
+        })
+        
+    return pd.DataFrame(results)
+
+
+
+def compute_ablation_metrics2(y_true, y_prob, tau, metric_scores, reject_rates, mode='global'):
+    """
+    Simulates triage using either Global Rejection or Class-Conditioned Rejection (CCRC).
+    Assumes metric_scores are aligned so that HIGHER values = MORE UNCERTAIN.
+    """
+    results = []
+    
+    # Get baseline predictions based on the optimal threshold
+    base_preds = (y_prob >= tau).astype(int)
+    
+    # --- NEW: Pre-compute original population sizes for AUGRC ---
+    N_total = len(y_true)
+    N_class0 = np.sum(y_true == 0)
+    N_class1 = np.sum(y_true == 1)
+    
+    for rate in reject_rates:
+        if rate >= 1.0: 
+            continue # Cannot evaluate if 100% of patients are rejected
+            
+        if mode == 'global':
+            # --- GLOBAL REJECTION ---
+            cutoff_val = np.percentile(metric_scores, 100 * (1 - rate))
+            keep_mask = metric_scores <= cutoff_val
+            
+        elif mode == 'ccrc':
+            # --- CLASS-CONDITIONED REJECTION (CCRC) ---
+            keep_mask = np.zeros_like(y_true, dtype=bool)
+            
+            for c in [0, 1]:
+                class_idx = (base_preds == c)
+                if np.sum(class_idx) > 0:
+                    class_scores = metric_scores[class_idx]
+                    class_cutoff = np.percentile(class_scores, 100 * (1 - rate))
+                    keep_mask[class_idx] = metric_scores[class_idx] <= class_cutoff
+        
+        # Filter the cohort
+        y_true_kept = y_true[keep_mask]
+        y_prob_kept = y_prob[keep_mask]
+        preds_kept = base_preds[keep_mask]
+        
+        # --- NEW: CALCULATE GENERALIZED RISK ---
+        # 1. Global Generalized Risk (Errors left in queue / TOTAL original queue)
+        errors_kept = (y_true_kept != preds_kept)
+        global_gen_risk = np.sum(errors_kept) / N_total
+        
+        # 2. Class-Conditioned Generalized Risk (ccGR)
+        # Class 0 (Stable)
+        errors_class0 = np.sum((y_true_kept == 0) & (preds_kept != 0))
+        cc_gen_risk_0 = errors_class0 / N_class0 if N_class0 > 0 else 0.0
+        
+        # Class 1 (Progressor)
+        errors_class1 = np.sum((y_true_kept == 1) & (preds_kept != 1))
+        cc_gen_risk_1 = errors_class1 / N_class1 if N_class1 > 0 else 0.0
+
+        # --- CALCULATE CLINICAL METRICS ON RETAINED PATIENTS ---
+        if len(np.unique(y_true_kept)) < 2:
+            sens, spec, auprc = 0.0, 0.0, 0.0
+        else:
+            tn, fp, fn, tp = confusion_matrix(y_true_kept, preds_kept, labels=[0, 1]).ravel()
+            sens = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+            spec = tn / (tn + fp) if (tn + fp) > 0 else 0.0
+            
+            precision, recall, _ = precision_recall_curve(y_true_kept, y_prob_kept)
+            auprc = auc(recall, precision)
+            
+        results.append({
+            'Reject_Rate': rate,
+            'Coverage': 1.0 - rate, # Added for AUGRC plotting convenience
+            'Sensitivity': sens,
+            'Specificity': spec,
+            'AUPRC': auprc,
+            'Global_Gen_Risk': global_gen_risk,
+            'ccGen_Risk_0': cc_gen_risk_0,
+            'ccGen_Risk_1': cc_gen_risk_1
+        })
+        
+    return pd.DataFrame(results)
