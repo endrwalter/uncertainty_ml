@@ -2,8 +2,8 @@
 #SBATCH --job-name=synth_sequential
 #SBATCH --partition=cpu
 #SBATCH --nodes=1
-#SBATCH --ntasks=1
-#SBATCH --cpus-per-task=20
+#SBATCH --ntasks=2
+#SBATCH --cpus-per-task=10
 #SBATCH --time=4-00:00:00     # IMPORTANT: Give it plenty of time (e.g., 4 days)
 #SBATCH --mem=60G            # High memory to prevent OOM kills
 
