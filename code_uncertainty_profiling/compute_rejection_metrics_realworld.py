@@ -52,7 +52,7 @@ warnings.filterwarnings('ignore')
 
 DISEASES = {
     'MS': {'tau': 0.11, 'label': 'Multiple Sclerosis  (Severe, τ=0.11)'},
-    'PD': {'tau': 0.29, 'label': 'Parkinson\'s Disease  (Moderate, τ=0.29)'},
+    'PD': {'tau': 0.39, 'label': 'Parkinson\'s Disease  (Moderate, τ=0.39)'},
     'AD': {'tau': 0.54, 'label': 'Alzheimer\'s Disease  (Mild, τ=0.54)'},
 }
 
@@ -61,6 +61,7 @@ METHODS = {
     'margin':     'Margin (Global)',
     'h_tau':      'H_tau (Global)',
     'h_tau_ccrc': 'H_tau + CCRC (Proposed)',
+    'random_ccrc': 'Random + CCRC (Control)',
 }
 
 INVERT_SIGNAL    = {'margin'}
@@ -170,6 +171,8 @@ def reject_patients(
         return df.copy()
     if method == 'h_tau_ccrc':
         return _ccrc_reject(df, rejection_rate)
+    elif method == 'random_ccrc':
+        return _ccrc_random_reject(df, rejection_rate)
     else:
         return _global_reject(df, uncertainty_col, rejection_rate, method)
 
@@ -194,7 +197,16 @@ def _ccrc_reject(df, rejection_rate):
         retained.append(sorted_cls.iloc[n_reject:])
     return pd.concat(retained) if retained else df.iloc[0:0].copy()
 
-
+def _ccrc_random_reject(df, rejection_rate):
+    retained = []
+    for cls in [0, 1]:
+        cls_df   = df[df['predicted_class'] == cls].copy()
+        if cls_df.empty:
+            continue
+        n_reject = int(np.floor(len(cls_df) * rejection_rate))
+        sorted_cls = cls_df.sample(frac=1, random_state=42)  # Random shuffle
+        retained.append(sorted_cls.iloc[n_reject:])
+    return pd.concat(retained) if retained else df.iloc[0:0].copy()
 # ─────────────────────────────────────────────
 # METRIC COMPUTATION (identical to synthetic script)
 # ─────────────────────────────────────────────
@@ -508,7 +520,7 @@ def _print_ccaugrc_summary(ccaugrc_df: pd.DataFrame):
 
     for disease in ['MS', 'PD', 'AD']:
         sub = ccaugrc_df[ccaugrc_df['disease'] == disease]
-        for method in ['h_total', 'margin', 'h_tau', 'h_tau_ccrc']:
+        for method in ['h_total', 'margin', 'h_tau', 'h_tau_ccrc', 'random_ccrc']:
             row = sub[sub['method'] == method]
             if row.empty:
                 continue
