@@ -23,8 +23,8 @@ export PYTHONPATH="/storage/DSH/projects/neuroart/uncertainty_ml:$PYTHONPATH"
 # 3. Define the list of commands you want to run
 # You can put completely different python scripts here, or the same script with different configs!
 COMMANDS=(
-    "python3 main_calibrate.py --config ../data/adni/config.ini"
-    #"python3 main_calibrate.py --config ../data/ms_neuro/config.ini"
+    #"python3 main_calibrate.py --config ../data/adni/config.ini"
+    "python3 main_calibrate.py --config ../data/ms_neuro/config.ini"
     #"python3 main_calibrate.py --config ../data/pd_neuro/config.ini"
 )
 
