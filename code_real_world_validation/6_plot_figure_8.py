@@ -3,7 +3,7 @@
 Drop-in replacement for the fig8_ccaugrc_real_table function
 in paper_figures.py.
 
-    python 8_figure_8.py \
+    python 6_plot_figure_8.py \
         --ccaugrc ../results/real_world_results/ccaugrc_real_world.csv \
         --out_dir ../figures/paper/
 """
@@ -120,7 +120,7 @@ def fig8_ccaugrc_real_table(ccaugrc_data: pd.DataFrame, out_dir: str):
                     )
 
         # Disease labels as x-ticks
-        tau_labels = {'MS': 'MS\n(τ=0.11)', 'PD': 'PD\n(τ=0.29)', 'AD': 'AD\n(τ=0.54)'}
+        tau_labels = {'MS': 'MS\n(τ=0.13)', 'PD': 'PD\n(τ=0.39)', 'AD': 'AD\n(τ=0.54)'}
         ax.set_xticks(x_centers)
         ax.set_xticklabels([tau_labels[d] for d in DISEASES_ORDER], fontsize=10)
         ax.set_ylabel('AUGRC Score  (lower = safer)', fontsize=10)

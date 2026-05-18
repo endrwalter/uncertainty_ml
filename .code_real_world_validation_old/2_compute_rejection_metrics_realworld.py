@@ -26,11 +26,11 @@ Output per disease (ready for paper_figures.py)
 
 Usage
 -----
-        python compute_rejection_metrics_realworld.py \
-            --ms_path  ../results/classification/ms_progression/progression_independent_from_relapses/aggregated/patient_mean_probs_progression_independent_from_relapses_ms_progression_model.csv \
-            --pd_path  ../results/classification/pd_dyskinesia/FutureDyskinesia/aggregated/patient_mean_probs_FutureDyskinesia_pd_dyskinesia_model.csv \
-            --ad_path  ../results/classification/mci_ad_conversion/label_bl_36m/aggregated/patient_mean_probs_label_bl_36m_mci_ad_conversion_model.csv \
-            --out_dir  ../results/real_world_results/
+python 2_compute_rejection_metrics_realworld.py \
+    --ms_path  ../results/classification/ms_progression/progression_independent_from_relapses/aggregated/patient_mean_probs_progression_independent_from_relapses_ms_progression_model.csv \
+    --pd_path  ../results/classification/pd_dyskinesia/FutureDyskinesia/aggregated/patient_mean_probs_FutureDyskinesia_pd_dyskinesia_model.csv \
+    --ad_path  ../results/classification/mci_ad_conversion/label_bl_36m/aggregated/patient_mean_probs_label_bl_36m_mci_ad_conversion_model.csv \
+    --out_dir  ../results/real_world_results/
 """
 
 import argparse
@@ -51,7 +51,7 @@ warnings.filterwarnings('ignore')
 # ─────────────────────────────────────────────
 
 DISEASES = {
-    'MS': {'tau': 0.11, 'label': 'Multiple Sclerosis  (Severe, τ=0.11)'},
+    'MS': {'tau': 0.13, 'label': 'Multiple Sclerosis  (Severe, τ=0.13)'},
     'PD': {'tau': 0.39, 'label': 'Parkinson\'s Disease  (Moderate, τ=0.39)'},
     'AD': {'tau': 0.54, 'label': 'Alzheimer\'s Disease  (Mild, τ=0.54)'},
 }
@@ -60,8 +60,8 @@ METHODS = {
     'h_total':    'H_Total (Global)',
     'margin':     'Margin (Global)',
     'h_tau':      'H_tau (Global)',
-    'h_tau_ccrc': 'H_tau + CCRC (Proposed)',
-    'random_ccrc': 'Random + CCRC (Control)',
+    'h_tau_ccr': 'H_tau + ccr (Proposed)',
+    'random_ccr': 'Random + ccr (Control)',
 }
 
 INVERT_SIGNAL    = {'margin'}
@@ -89,7 +89,7 @@ def load_and_prepare(path: str, tau: float, disease: str) -> pd.DataFrame:
     -------
     df with columns:
         idx, mu, sigma, label, tau,
-        h_total, margin, h_tau, h_tau_ccrc,
+        h_total, margin, h_tau, h_tau_ccr,
         predicted_class, ensemble_variance
     """
     print(f"\n  Loading {disease}: {path}")
@@ -143,10 +143,11 @@ def load_and_prepare(path: str, tau: float, disease: str) -> pd.DataFrame:
     # Predicted class
     df['predicted_class'] = (df['mu'] >= tau_val).astype(int)
 
-    # H_tau CCRC: within-class percentile rank of h_tau
-    df['h_tau_ccrc'] = df.groupby('predicted_class')['h_tau'].rank(
+    # H_tau CCR: within-class percentile rank of h_tau
+    df['h_tau_ccr'] = df.groupby('predicted_class')['h_tau'].rank(
         method='average', pct=True
     )
+
 
     n_min = (df['label'] == 1).sum()
     n_maj = (df['label'] == 0).sum()
@@ -169,10 +170,10 @@ def reject_patients(
 ) -> pd.DataFrame:
     if rejection_rate == 0.0:
         return df.copy()
-    if method == 'h_tau_ccrc':
-        return _ccrc_reject(df, rejection_rate)
-    elif method == 'random_ccrc':
-        return _ccrc_random_reject(df, rejection_rate)
+    if method == 'h_tau_ccr':
+        return _ccr_reject(df, rejection_rate)
+    elif method == 'random_ccr':
+        return _ccr_random_reject(df, rejection_rate)
     else:
         return _global_reject(df, uncertainty_col, rejection_rate, method)
 
@@ -186,18 +187,18 @@ def _global_reject(df, uncertainty_col, rejection_rate, method):
     return df.loc[sorted_df.index[n_reject:]].copy()
 
 
-def _ccrc_reject(df, rejection_rate):
+def _ccr_reject(df, rejection_rate):
     retained = []
     for cls in [0, 1]:
         cls_df   = df[df['predicted_class'] == cls].copy()
         if cls_df.empty:
             continue
         n_reject = int(np.floor(len(cls_df) * rejection_rate))
-        sorted_cls = cls_df.sort_values('h_tau_ccrc', ascending=False)
+        sorted_cls = cls_df.sort_values('h_tau_ccr', ascending=False)
         retained.append(sorted_cls.iloc[n_reject:])
     return pd.concat(retained) if retained else df.iloc[0:0].copy()
 
-def _ccrc_random_reject(df, rejection_rate):
+def _ccr_random_reject(df, rejection_rate):
     retained = []
     for cls in [0, 1]:
         cls_df   = df[df['predicted_class'] == cls].copy()
@@ -520,7 +521,7 @@ def _print_ccaugrc_summary(ccaugrc_df: pd.DataFrame):
 
     for disease in ['MS', 'PD', 'AD']:
         sub = ccaugrc_df[ccaugrc_df['disease'] == disease]
-        for method in ['h_total', 'margin', 'h_tau', 'h_tau_ccrc', 'random_ccrc']:
+        for method in ['h_total', 'margin', 'h_tau', 'h_tau_ccr', 'random_ccr']:
             row = sub[sub['method'] == method]
             if row.empty:
                 continue

@@ -3,3 +3,4 @@ results*
 .sbatch_logs*
 .container_files*
 code_notebooks*
+code_evaluate_adni*

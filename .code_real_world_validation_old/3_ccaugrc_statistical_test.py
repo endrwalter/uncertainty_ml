@@ -7,10 +7,8 @@ for ccAUGRC differences between methods.
 Automatically selects the appropriate approach based on
 minority class size per test split.
 
-Approach 1 (per-iteration): used when minority patients per
-    split > 30. Gives paired Wilcoxon test across iterations.
 
-Approach 2 (patient bootstrap): used when minority patients
+Approach-> patient bootstrap: used when minority patients
     per split <= 30, or when only aggregated data is available.
     Bootstraps the full aggregated ensemble (deployment reality).
     Gives 95% CI on the difference between methods.
@@ -24,12 +22,6 @@ Usage
         --ad_summary ../results/classification/mci_ad_conversion/label_bl_36m/aggregated/patient_mean_probs_label_bl_36m_mci_ad_conversion_model.csv \
         --out_dir ../results/statistical_tests/
 
-    # From raw predictions (auto-selects approach)
-    python 10_ccaugrc_statistical_test_v2.py \
-        --ms_raw ../results/.../..._aggregated.csv \
-        --pd_raw ../results/.../..._aggregated.csv \
-        --ad_raw ../results/.../..._aggregated.csv \
-        --out_dir ../results/statistical_tests/
 """
 
 import argparse
@@ -55,6 +47,8 @@ METHODS = {
     'margin':     'Margin (Global)',
     'h_tau':      'H_tau (Global)',
     'h_tau_ccrc': 'H_tau + CCRC (Proposed)',
+    'random_ccr': 'Random + ccr (Control)',
+
 }
 
 REJECTION_RATES  = np.arange(0.0, 0.81, 0.05).round(2)
@@ -160,79 +154,9 @@ def compute_all_metrics(df, tau):
     return records
 
 
-# ─────────────────────────────────────────────
-# APPROACH SELECTION
-# ─────────────────────────────────────────────
-
-def check_minority_per_split(
-    raw_df: pd.DataFrame,
-    label_col: str,
-    idx_col: str,
-    prob_col: str,
-) -> int:
-    """
-    Estimate minority patients per test split.
-    Uses the fact that in an 80/20 split with 30 iterations,
-    each patient appears in roughly 20% of iterations as a
-    test patient.
-    """
-    n_minority_total = (raw_df[label_col] == 1).nunique() \
-        if idx_col in raw_df.columns else (raw_df[label_col] == 1).sum()
-
-    # Count how many times each patient appears (= number of iterations
-    # they were in the test set)
-    appearances = raw_df.groupby(idx_col).size()
-    n_iters_est = appearances.median()
-
-    # Minority patients in the full dataset
-    minority_ids  = raw_df[raw_df[label_col] == 1][idx_col].unique()
-    n_minority    = len(minority_ids)
-
-    # Expected minority per split ≈ total_minority × test_fraction
-    # test_fraction ≈ appearances_per_patient / total_iterations
-    # Since we don't know total iterations directly, use appearance counts
-    # If each patient appears ~6 times (out of 30 iters), test_frac ≈ 0.2
-    test_frac = appearances.median() / appearances.max() \
-                if appearances.max() > 0 else 0.2
-
-    minority_per_split = int(n_minority * test_frac)
-    return minority_per_split, n_minority
 
 
-# ─────────────────────────────────────────────
-# APPROACH 1: PER-ITERATION
-# ─────────────────────────────────────────────
 
-def approach1_per_iteration(
-    raw_df: pd.DataFrame,
-    tau: float,
-    idx_col: str,
-    prob_col: str,
-    label_col: str,
-) -> pd.DataFrame:
-    """
-    Compute ccAUGRC per iteration. Only use when minority
-    patients per split > MIN_MINORITY_PER_SPLIT.
-    """
-    # Identify iterations by cumcount within patient
-    raw_df = raw_df.copy()
-    raw_df['_iter'] = raw_df.groupby(idx_col).cumcount()
-
-    records = []
-    for it, group in raw_df.groupby('_iter'):
-        iter_df = (
-            group.groupby(idx_col)
-            .agg(mu=(prob_col, 'mean'), label=(label_col, 'first'))
-            .reset_index()
-        )
-        if iter_df['label'].nunique() < 2:
-            continue
-
-        metrics = compute_all_metrics(iter_df, tau)
-        for method, vals in metrics.items():
-            records.append({'iteration': it, 'method': method, **vals})
-
-    return pd.DataFrame(records)
 
 
 # ─────────────────────────────────────────────
@@ -425,42 +349,15 @@ def run_disease(
 
     os.makedirs(out_dir, exist_ok=True)
 
-    # ── Load data and select approach ──
-    if raw_path and os.path.exists(raw_path):
-        raw_df = pd.read_csv(raw_path)
-        minority_per_split, n_minority = check_minority_per_split(
-            raw_df, label_col, idx_col, prob_col
-        )
-        print(f"  Total minority: {n_minority}")
-        print(f"  Estimated minority per split: {minority_per_split}")
+    print(f"  → patient bootstrap — only summary data available")
+    summary  = pd.read_csv(summary_path)
+    if 'mu' not in summary.columns:
+        raise ValueError(f"Summary must have 'mu' column. Found: {summary.columns.tolist()}")
+    n_minority = (summary['label'] == 1).sum()
+    print(f"  Total minority: {n_minority}")
+    iter_df  = approach2_bootstrap(summary, tau)
+    iter_col = 'bootstrap_iter'
 
-        if minority_per_split >= MIN_MINORITY_PER_SPLIT:
-            print(f"  → Approach 1 (per-iteration Wilcoxon) — minority per split sufficient")
-            iter_df  = approach1_per_iteration(raw_df, tau, idx_col, prob_col, label_col)
-            iter_col = 'iteration'
-        else:
-            print(f"  → Approach 2 (patient bootstrap) — minority per split too small ({minority_per_split} < {MIN_MINORITY_PER_SPLIT})")
-            print(f"     Bootstrapping aggregated ensemble (deployment reality)...")
-            summary  = (
-                raw_df.groupby(idx_col)
-                .agg(mu=(prob_col, 'mean'), label=(label_col, 'first'))
-                .reset_index()
-            )
-            iter_df  = approach2_bootstrap(summary, tau)
-            iter_col = 'bootstrap_iter'
-
-    elif summary_path and os.path.exists(summary_path):
-        print(f"  → Approach 2 (patient bootstrap) — only summary data available")
-        summary  = pd.read_csv(summary_path)
-        if 'mu' not in summary.columns:
-            raise ValueError(f"Summary must have 'mu' column. Found: {summary.columns.tolist()}")
-        n_minority = (summary['label'] == 1).sum()
-        print(f"  Total minority: {n_minority}")
-        iter_df  = approach2_bootstrap(summary, tau)
-        iter_col = 'bootstrap_iter'
-    else:
-        print(f"  [SKIP] No valid data path provided")
-        return None
 
     # ── Save bootstrap/iteration distributions ──
     iter_df.to_csv(
@@ -490,10 +387,7 @@ def run_disease(
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    # Raw prediction files (preferred)
-    parser.add_argument('--ms_raw',     default=None)
-    parser.add_argument('--pd_raw',     default=None)
-    parser.add_argument('--ad_raw',     default=None)
+
     # Aggregated summary files (fallback)
     parser.add_argument('--ms_summary', default=None)
     parser.add_argument('--pd_summary', default=None)
