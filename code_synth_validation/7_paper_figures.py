@@ -58,7 +58,7 @@ LABELS = {
 }
 DISEASE_MARKERS = {
     'MS': {'tau': 0.11, 'color': '#8E44AD', 'marker': 'D'},
-    'PD': {'tau': 0.29, 'color': '#16A085', 'marker': 's'},
+    'PD': {'tau': 0.39, 'color': '#16A085', 'marker': 's'},
     'AD': {'tau': 0.54, 'color': '#E67E22', 'marker': '^'},
 }
 
@@ -224,19 +224,17 @@ def fig1_three_pathologies(out_dir: str):
 
 def fig2_sensitivity_stability(scalars: pd.DataFrame, out_dir: str, n: int = 1000):
     """
-    Full-width primary figure.
-    Top: sensitivity stability slope vs tau (main panel)
-    Bottom strip: sensitivity and coverage at 30% rejection (supporting)
+    Print-optimized primary figure for Sensitivity Stability.
     """
     set_style()
     df = scalars[scalars['n'] == n].copy()
-
     methods_to_show = ['h_total', 'h_tau', 'h_tau_ccrc']
 
-    fig = plt.figure(figsize=(16, 10))
+    # 1. Print-Optimized Dimensions (10 inches wide fits standard journal column/page)
+    fig = plt.figure(figsize=(10, 7))
     gs  = gridspec.GridSpec(2, 2, figure=fig,
-                            height_ratios=[1.8, 1],
-                            hspace=0.42, wspace=0.32)
+                            height_ratios=[1.5, 1],
+                            hspace=0.45, wspace=0.3)
 
     # ── Main panel: sensitivity stability ──
     ax_main = fig.add_subplot(gs[0, :])
@@ -249,105 +247,66 @@ def fig2_sensitivity_stability(scalars: pd.DataFrame, out_dir: str, n: int = 100
         ax_main.plot(
             mean.index, mean.values,
             color=PALETTE[method], label=LABELS[method],
-            marker='o', linewidth=2.5, markersize=7, zorder=3
+            marker='o', linewidth=2.0, markersize=5, zorder=3
         )
         ax_main.fill_between(
-            mean.index,
-            mean.values - std.values,
-            mean.values + std.values,
+            mean.index, mean.values - std.values, mean.values + std.values,
             color=PALETTE[method], alpha=0.15
         )
 
-    # Zero line — the stability reference
-    ax_main.axhline(0, color='#2C3E50', ls='--', lw=1.5, alpha=0.7,
-                    label='Stability reference (slope = 0)')
+    ax_main.axhline(0, color='#2C3E50', ls='--', lw=1.2, alpha=0.7, label='Reference (slope = 0)')
+    
+    # Annotation
+    min_val = df[df['method']=='h_total']['sensitivity_stability'].min()
+    ax_main.axhspan(min_val * 1.05, -0.3, alpha=0.06, color='#C0392B')
 
-    # Danger zone annotation
-    ax_main.axhspan(
-        df[df['method']=='h_total']['sensitivity_stability'].min() * 1.05,
-        -0.3, alpha=0.06, color='#C0392B'
-    )
-    ax_main.text(
-        0.08, -1.8,
-        'Active minority\ndeletion zone',
-        fontsize=9, color='#C0392B', style='italic',
-        bbox=dict(boxstyle='round,pad=0.3', facecolor='#FDEDEC', alpha=0.8)
-    )
 
-    # Disease markers
-    for disease, props in DISEASE_MARKERS.items():
-        ax_main.axvline(
-            props['tau'], color=props['color'],
-            ls=':', lw=2.0, alpha=0.9
-        )
-        ax_main.text(
-            props['tau'] + 0.005,
-            ax_main.get_ylim()[0] if ax_main.get_ylim()[0] < -0.5 else -0.5,
-            disease,
-            color=props['color'], fontsize=9,
-            fontweight='bold', rotation=0
-        )
-
-    ax_main.set_xlabel('Class Prior  τ', fontsize=12)
-    ax_main.set_ylabel('Sensitivity Stability\n(slope of sensitivity over 0–50% rejection)',
-                        fontsize=11)
-    ax_main.set_title(
-        'Standard UQ Actively Destroys Minority Sensitivity Under Rejection\n'
-        'H_tau Maintains Stability Across All Class Priors',
-        fontsize=13, pad=10
-    )
-    ax_main.legend(loc='lower right', fontsize=9)
-    ax_main.text(0.01, 0.97, 'A', transform=ax_main.transAxes,
-                 fontsize=14, fontweight='bold', va='top')
+    ax_main.set_xlabel('Class Prior  τ', fontsize=10)
+    ax_main.set_ylabel('Sensitivity Stability\n(slope over 0–50% rej.)', fontsize=10)
+    ax_main.set_title('A', loc='left', fontsize=12, fontweight='bold', pad=8)
+    ax_main.tick_params(labelsize=9)
 
     # ── Supporting panel left: sensitivity at 30% ──
     ax_s = fig.add_subplot(gs[1, 0])
     for method in methods_to_show:
-        sub  = df[df['method'] == method].groupby('tau')['sensitivity_at_30pct']
-        mean = sub.mean()
-        std  = sub.std()
-        ax_s.plot(mean.index, mean.values,
-                  color=PALETTE[method], marker='o', lw=2.0, ms=5)
-        ax_s.fill_between(mean.index,
-                          mean.values - std.values,
-                          mean.values + std.values,
+        sub = df[df['method'] == method].groupby('tau')['sensitivity_at_30pct']
+        ax_s.plot(sub.mean().index, sub.mean().values, color=PALETTE[method], marker='o', lw=1.5, ms=4)
+        ax_s.fill_between(sub.mean().index, sub.mean()-sub.std(), sub.mean()+sub.std(), 
                           color=PALETTE[method], alpha=0.15)
 
-    for disease, props in DISEASE_MARKERS.items():
-        ax_s.axvline(props['tau'], color=props['color'], ls=':', lw=1.5, alpha=0.8)
-
-    ax_s.set_xlabel('Class Prior  τ')
-    ax_s.set_ylabel('Minority Sensitivity @ 30%')
-    ax_s.set_title('B   Sensitivity at Fixed Rejection Rate', fontweight='bold')
+    ax_s.set_xlabel('Class Prior  τ', fontsize=10)
+    ax_s.set_ylabel('Sensitivity @ 30%', fontsize=10)
+    ax_s.set_title('B', loc='left', fontsize=12, fontweight='bold', pad=8)
+    ax_s.tick_params(labelsize=9)
     ax_s.set_ylim(0, 1.05)
 
-    # ── Supporting panel right: minority coverage at 30% ──
+    # ── Supporting panel right: specificity at 30% ──
     ax_c = fig.add_subplot(gs[1, 1])
     for method in methods_to_show:
-        sub  = df[df['method'] == method].groupby('tau')['minority_coverage_at_30pct']
-        mean = sub.mean()
-        std  = sub.std()
-        ax_c.plot(mean.index, mean.values,
-                  color=PALETTE[method], label=LABELS[method],
-                  marker='o', lw=2.0, ms=5)
-        ax_c.fill_between(mean.index,
-                          mean.values - std.values,
-                          mean.values + std.values,
+        sub = df[df['method'] == method].groupby('tau')['specificity_at_30pct']
+        ax_c.plot(sub.mean().index, sub.mean().values, color=PALETTE[method], marker='o', lw=1.5, ms=4)
+        ax_c.fill_between(sub.mean().index, sub.mean()-sub.std(), sub.mean()+sub.std(), 
                           color=PALETTE[method], alpha=0.15)
 
-    for disease, props in DISEASE_MARKERS.items():
-        ax_c.axvline(props['tau'], color=props['color'], ls=':', lw=1.5, alpha=0.8)
-
-    ax_c.set_xlabel('Class Prior  τ')
-    ax_c.set_ylabel('Minority Coverage @ 30% Rejection')
-    ax_c.set_title('C   Minority Class Coverage at Fixed Rejection', fontweight='bold')
+    ax_c.set_xlabel('Class Prior  τ', fontsize=10)
+    ax_c.set_ylabel('Specificity @ 30%', fontsize=10)
+    ax_c.set_title('C', loc='left', fontsize=12, fontweight='bold', pad=8)
+    ax_c.tick_params(labelsize=9)
     ax_c.set_ylim(0, 1.05)
-    ax_c.legend(fontsize=8)
+
+    # Reserve space for the legend
+    plt.tight_layout(rect=[0, 0.08, 1, 1])
+
+    # Global single-line legend
+    handles, labels = ax_main.get_legend_handles_labels()
+    by_label = dict(zip(labels, handles))
+    fig.legend(by_label.values(), by_label.keys(),
+               loc='lower center', bbox_to_anchor=(0.5, 0.01),
+               ncol=len(by_label), fontsize=10, frameon=False)
 
     path = os.path.join(out_dir, 'fig2_sensitivity_stability.pdf')
     plt.savefig(path)
     plt.close()
-    print(f"Saved: {path}")
 
 
 # ─────────────────────────────────────────────
@@ -356,10 +315,7 @@ def fig2_sensitivity_stability(scalars: pd.DataFrame, out_dir: str, n: int = 100
 
 def fig3_failure_map(scalars: pd.DataFrame, out_dir: str, n: int = 1000):
     """
-    Phase diagram reframed as a failure map.
-    Two panels: H_Total | Difference (Proposed - Baseline)
-    Phase boundary prominently marked.
-    Disease points as primary visual anchors.
+    Print-optimized Failure Map (Figure 3).
     """
     set_style()
     df = scalars[scalars['n'] == n].copy()
@@ -369,99 +325,47 @@ def fig3_failure_map(scalars: pd.DataFrame, out_dir: str, n: int = 1000):
     d_vals   = sorted(df['d'].unique())
 
     def make_grid(method):
-        return (
-            df[df['method'] == method]
-            .pivot(index='tau', columns='d', values=metric)
-            .reindex(index=tau_vals, columns=d_vals)
-            .values
-        )
+        return (df[df['method'] == method]
+                .pivot(index='tau', columns='d', values=metric)
+                .reindex(index=tau_vals, columns=d_vals).values)
 
     grid_htotal = make_grid('h_total')
     grid_ccrc   = make_grid('h_tau_ccrc')
     grid_diff   = grid_ccrc - grid_htotal
 
-    fig, axes = plt.subplots(1, 2, figsize=(16, 6))
-    fig.suptitle(
-        'Standard UQ Failure Map: Where Minority Patients Are Abandoned\n'
-        f'(Minority Sensitivity at 30% Rejection,  N={n})',
-        fontsize=13, fontweight='bold'
-    )
+    # 1. Print-Optimized Dimensions (10 inches wide)
+    fig, axes = plt.subplots(1, 2, figsize=(10, 5))
 
     kw = dict(
-        xticklabels=[str(d) for d in d_vals],
+        xticklabels=[f'{d:.1f}' for d in d_vals],
         yticklabels=[f'{t:.2f}' for t in tau_vals],
-        linewidths=0.8, linecolor='white',
+        linewidths=0.5, linecolor='white',
+        cbar_kws={'shrink': 0.8}
     )
 
     # Panel A: H_Total failure map
-    # Custom colormap: red (failure) → yellow → green (safe)
-    sns.heatmap(
-        grid_htotal, ax=axes[0],
-        vmin=0, vmax=1,
-        cmap='RdYlGn',
-        annot=True, fmt='.2f', annot_kws={'size': 10},
-        **kw
-    )
-    axes[0].set_title('A   Standard UQ (H_Total)\nMinority Sensitivity at 30% Rejection',
-                      fontsize=11, pad=8)
-    axes[0].set_xlabel('Separability  (d)', fontsize=11)
-    axes[0].set_ylabel('Class Prior  τ', fontsize=11)
-    """
-    # Draw phase boundary: contour where sensitivity < 0.5
-    # Approximate by shading cells where value < 0.5
-    for ri, row in enumerate(grid_htotal):
-        for ci, val in enumerate(row):
-            if not np.isnan(val) and val < 0.5:
-                axes[0].add_patch(plt.Rectangle(
-                    (ci, ri), 1, 1,
-                    fill=False, edgecolor='#C0392B',
-                    linewidth=2.5, zorder=5
-                ))
+    sns.heatmap(grid_htotal, ax=axes[0], vmin=0, vmax=1, cmap='RdYlGn',
+                annot=True, fmt='.1f', annot_kws={'size': 7}, **kw)
+    
+    axes[0].set_title('A   Standard UQ (H_Total)', loc='left', fontsize=12, fontweight='bold', pad=10)
+    axes[0].set_xlabel('Separability (d)', fontsize=10)
+    axes[0].set_ylabel('Class prior  τ', fontsize=10)
+    cbar0 = axes[0].collections[0].colorbar
+    cbar0.set_label('Sensitivity', fontsize=9)
 
-    # Add "DANGER ZONE" label
-    axes[0].text(
-        0.5, 0.15,
-        'DANGER ZONE\n(sensitivity < 0.5)',
-        transform=axes[0].transAxes,
-        fontsize=9, color='#C0392B', fontweight='bold',
-        ha='center', va='bottom',
-        bbox=dict(boxstyle='round,pad=0.3', facecolor='white',
-                  edgecolor='#C0392B', alpha=0.9)
-    )
-    """
-    # Panel B: Difference map — the recovery
+    # Panel B: Difference map
     vmax_diff = max(0.01, np.nanmax(np.abs(grid_diff)))
-    im = sns.heatmap(
-        grid_diff, ax=axes[1],
-        vmin=-vmax_diff, vmax=vmax_diff,
-        cmap='RdBu_r', center=0,
-        annot=True, fmt='+.2f', annot_kws={'size': 10},
-        **kw
-    )
-    axes[1].set_title('B   Recovery: H_tau + CCRC vs H_Total\n(Positive = framework recovers minority sensitivity)',
-                      fontsize=11, pad=8)
-    axes[1].set_xlabel('Separability  (d)', fontsize=11)
+    sns.heatmap(grid_diff, ax=axes[1], vmin=-vmax_diff, vmax=vmax_diff,
+                cmap='RdBu_r', center=0,
+                annot=True, fmt='+.1f', annot_kws={'size': 7}, **kw)
+    
+    axes[1].set_title('B   Recovery: H_tau + CCR', loc='left', fontsize=12, fontweight='bold', pad=10)
+    axes[1].set_xlabel('Separability (d)', fontsize=10)
     axes[1].set_ylabel('')
+    cbar1 = axes[1].collections[0].colorbar
+    cbar1.set_label('Gain in Sensitivity', fontsize=9)
 
-    # Disease points — primary visual anchors
-    disease_tau_d = {
-        'MS\n(τ=0.11)': (0.10, 0.5),
-        'PD\n(τ=0.29)': (0.30, 1.0),
-        'AD\n(τ=0.54)': (0.50, 2.0),
-    }
-    for label, (tau_r, d_r) in disease_tau_d.items():
-        tau_idx = np.argmin(np.abs(np.array(tau_vals) - tau_r))
-        d_idx   = np.argmin(np.abs(np.array(d_vals)   - d_r))
-
-        for ax in axes:
-
-            ax.text(
-                d_idx + 0.98, tau_idx + 0.02, label,
-                ha='right', va='top',
-                fontsize=8, fontweight='bold', color='black',
-                zorder=7
-            )
-
+    
     plt.tight_layout()
     path = os.path.join(out_dir, 'fig3_failure_map.pdf')
     plt.savefig(path)

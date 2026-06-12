@@ -29,9 +29,9 @@ Produces two output files:
 
 Usage
 -----
-    python compute_rejection_metrics.py \
+    python 5_compute_rejection_metrics.py \
         --input   ../data/synthetic_results/all_conditions_uncertainty.csv \
-        --out_dir ../data/synthetic_results/
+        --out_dir ../data/synthetic_results
 """
 
 import argparse
@@ -248,6 +248,9 @@ def compute_all_rejection_metrics(
             for rr in REJECTION_RATES:
                 retained = reject_patients(group, method_col, rr, method_col, tau)
                 metrics  = compute_metrics_on_cohort(retained)
+                #if retained['label'].nunique() < 2:
+                #    print(f"    Warning: Only one class retained for tau={tau:.2f}, d={d:.1f}, n={n}, "
+                #          f"method={method_label}, rr={rr:.2f}. Metrics may be unreliable.")
 
                 # Coverage per class
                 n_min_total = (group['label'] == 1).sum()

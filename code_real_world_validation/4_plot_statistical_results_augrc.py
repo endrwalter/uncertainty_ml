@@ -30,28 +30,30 @@ warnings.filterwarnings('ignore')
 # ─────────────────────────────────────────────
 # CONFIGURATION
 # ─────────────────────────────────────────────
-
-METHODS_ORDER = ['h_total', 'margin', 'h_tau', 'h_tau_ccr']
+METHODS_ORDER = ['h_total', 'margin', 'h_tau', 'random_ccr', 'h_tau_ccr']
 
 METHOD_LABELS = {
     'h_total':    'H_Total\n(Global)',
     'margin':     'Margin\n(Global)',
     'h_tau':      'H_tau\n(Global)',
-    'h_tau_ccr': 'H_tau+ccr\n(Proposed)',
+    'random_ccr': 'Random+ccr\n(Control)',
+    'h_tau_ccr':  'H_tau+ccr\n(Proposed)',
 }
 
 METHOD_LABELS_SHORT = {
     'h_total':    'H_Total',
     'margin':     'Margin',
     'h_tau':      'H_tau',
-    'h_tau_ccr': 'H_tau+ccr',
+    'random_ccr': 'Random+ccr',
+    'h_tau_ccr':  'H_tau+ccr',
 }
 
 PALETTE = {
-    'h_total':    '#C0392B',
-    'margin':     '#E67E22',
-    'h_tau':      '#2980B9',
-    'h_tau_ccr': '#27AE60',
+    'h_total':    '#C0392B', # Red
+    'margin':     '#E67E22', # Orange
+    'h_tau':      '#2980B9', # Blue
+    'random_ccr': '#8E44AD', # Purple (New for Random+ccr)
+    'h_tau_ccr':  '#27AE60', # Green
 }
 
 DISEASES_ORDER = ['MS', 'PD', 'AD']
