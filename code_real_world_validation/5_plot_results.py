@@ -131,10 +131,6 @@ def fig6_real_rejection_curves(real_data: dict, out_dir: str):
                     alpha=style['alpha'], zorder=style['zorder']
                 )
 
-            ax.axvline(0.30, color='#7F8C8D', ls='--', lw=1.0, alpha=0.5, zorder=0)
-            if row == 0 and col == 0:
-                ax.text(0.32, 0.15, 'Target\nOp. Point', 
-                        fontsize=8, color='#7F8C8D', alpha=0.9, va='bottom')
 
             ax.set_ylim(0, 1.05)
             ax.set_xlim(0, 0.80)
@@ -196,7 +192,7 @@ def fig7_asymmetry_test(asymmetry_data: dict, out_dir: str):
     fig, axes = plt.subplots(1, 3, figsize=(10, 4))
 
     diseases = [
-        ('A', 'MS', 'MS Cohort  (τ=0.11)', DISEASE_MARKERS['MS']['color']),
+        ('A', 'MS', 'MS Cohort  (τ=0.13)', DISEASE_MARKERS['MS']['color']),
         ('B', 'PD', 'PD Cohort  (τ=0.39)', DISEASE_MARKERS['PD']['color']),
         ('C', 'AD', 'AD Cohort  (τ=0.54)', DISEASE_MARKERS['AD']['color']),
     ]

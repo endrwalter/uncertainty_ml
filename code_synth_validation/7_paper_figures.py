@@ -52,9 +52,9 @@ LABELS = {
     'h_total':      'H_Total (Global)',
     'margin':       'Margin (Global)',
     'h_tau':        'H_tau (Global)',
-    'h_tau_ccrc':   'H_tau + CCRC (Proposed)',
-    'h_total_ccrc': 'H_Total + CCRC',
-    'margin_ccrc':  'Margin + CCRC',
+    'h_tau_ccrc':   'H_tau + CCR (Proposed)',
+    'h_total_ccrc': 'H_Total + CCR',
+    'margin_ccrc':  'Margin + CCR',
 }
 DISEASE_MARKERS = {
     'MS': {'tau': 0.11, 'color': '#8E44AD', 'marker': 'D'},
@@ -82,147 +82,12 @@ def set_style():
     })
 
 
-# ─────────────────────────────────────────────
-# FIG 1 — CONCEPTUAL: THREE PATHOLOGIES
-# ─────────────────────────────────────────────
-
-def fig1_three_pathologies(out_dir: str):
-    """
-    Three-panel conceptual figure.
-    No data required — all analytically generated.
-    """
-    set_style()
-    fig = plt.figure(figsize=(18, 5.5))
-    gs  = gridspec.GridSpec(1, 3, figure=fig, wspace=0.38)
-
-    tau = 0.11   # MS-like, most extreme case
-
-    # ── Panel 1: Threshold-Entropy Mismatch ──
-    ax1 = fig.add_subplot(gs[0])
-    p   = np.linspace(0.001, 0.999, 500)
-    H   = -p * np.log2(p) - (1-p) * np.log2(1-p)
-
-    ax1.plot(p, H, color='#2C3E50', lw=2.5, label='Shannon Entropy H(p)')
-    ax1.axvline(0.5,  color='#7F8C8D', ls='--', lw=1.5, label='H(p) maximum (p=0.5)')
-    ax1.axvline(tau,  color=DISEASE_MARKERS['MS']['color'],
-                ls='-', lw=2.0, label=f'Decision boundary (τ={tau})')
-
-    # Shade the mismatch zone
-    ax1.axvspan(tau, 0.5, alpha=0.12, color='#C0392B',
-                label='Mismatch zone')
-
-    # Annotate the patient example
-    p_patient = 0.55
-    H_patient = -p_patient*np.log2(p_patient) - (1-p_patient)*np.log2(1-p_patient)
-    ax1.annotate(
-        f'Confident progressor\n(p={p_patient}) flagged as\nmaximally uncertain',
-        xy=(p_patient, H_patient), xytext=(0.62, 0.65),
-        arrowprops=dict(arrowstyle='->', color='#C0392B', lw=1.5),
-        fontsize=8.5, color='#C0392B',
-        bbox=dict(boxstyle='round,pad=0.3', facecolor='#FDEDEC', alpha=0.9)
-    )
-    ax1.scatter([p_patient], [H_patient], color='#C0392B', s=60, zorder=5)
-
-    ax1.set_xlabel('Predicted Probability p')
-    ax1.set_ylabel('Binary Entropy H(p)')
-    ax1.set_title('Pathology 1\nThreshold–Entropy Mismatch')
-    ax1.legend(fontsize=8, loc='upper right')
-    ax1.text(0.02, 0.97, 'A', transform=ax1.transAxes,
-             fontsize=14, fontweight='bold', va='top')
-
-    # ── Panel 2: Spatial Penalty ──
-    ax2 = fig.add_subplot(gs[1])
-
-    stable_max    = tau
-    prog_max      = 1 - tau
-    categories    = ['Stable Class\n(Majority)', 'Progressor Class\n(Minority)']
-    maxima        = [stable_max, prog_max]
-    colors_bars   = ['#2980B9', '#C0392B']
-
-    bars = ax2.bar(categories, maxima, color=colors_bars, width=0.45,
-                   alpha=0.85, edgecolor='white', linewidth=1.5)
-
-    # Global threshold line
-    threshold = 0.20
-    ax2.axhline(threshold, color='#2C3E50', ls='--', lw=2,
-                label=f'Global rejection threshold')
-
-    # Shade rejected zone for stable class
-    ax2.bar(['Stable Class\n(Majority)'], [min(threshold, stable_max)],
-            color='#C0392B', alpha=0.35, width=0.45, label='Rejected zone')
-
-    ax2.set_ylabel('Maximum Decision Margin |p − τ|')
-    ax2.set_title('Pathology 2\nSpatial Penalty')
-    ax2.set_ylim(0, 1.05)
-    ax2.legend(fontsize=8)
-
-    # Annotate runway values
-    for bar, val, label in zip(bars, maxima, [f'Max = {stable_max:.2f}', f'Max = {prog_max:.2f}']):
-        ax2.text(bar.get_x() + bar.get_width()/2, val + 0.02,
-                 label, ha='center', va='bottom', fontsize=9, fontweight='bold')
-
-    ax2.text(0.02, 0.97, 'B', transform=ax2.transAxes,
-             fontsize=14, fontweight='bold', va='top')
-
-    # ── Panel 3: Uncertainty Floor / Probability Compression ──
-    ax3 = fig.add_subplot(gs[2])
-
-    rng = np.random.default_rng(42)
-
-    # Majority class: tight cluster near 0
-    p_majority = rng.beta(2, 18, 3000) * 0.5
-    # Minority class: spread across [tau, 0.60] — compressed by glass ceiling
-    p_minority = rng.beta(2, 5, 300) * (0.60 - tau) + tau
-
-    x_range = np.linspace(0, 1, 400)
-
-    kde_maj = gaussian_kde(p_majority, bw_method=0.08)
-    kde_min = gaussian_kde(p_minority, bw_method=0.12)
-
-    ax3.fill_between(x_range, kde_maj(x_range), alpha=0.55,
-                     color='#2980B9', label='Stable (Majority)')
-    ax3.fill_between(x_range, kde_min(x_range), alpha=0.55,
-                     color='#C0392B', label='Progressor (Minority)')
-    ax3.plot(x_range, kde_maj(x_range), color='#2980B9', lw=1.5)
-    ax3.plot(x_range, kde_min(x_range), color='#C0392B', lw=1.5)
-
-    ax3.axvline(tau,  color=DISEASE_MARKERS['MS']['color'],
-                lw=2.0, ls='-', label=f'τ = {tau}')
-    ax3.axvline(0.60, color='#C0392B', lw=1.5, ls=':',
-                label='Epistemic glass ceiling (p=0.60)')
-
-    ax3.annotate(
-        'Uncertainty\nFloor',
-        xy=(0.50, 0.5), xytext=(0.68, 2.5),
-        arrowprops=dict(arrowstyle='->', color='#C0392B', lw=1.5),
-        fontsize=8.5, color='#C0392B',
-        bbox=dict(boxstyle='round,pad=0.3', facecolor='#FDEDEC', alpha=0.9)
-    )
-
-    ax3.set_xlabel('Predicted Probability p')
-    ax3.set_ylabel('Patient Density')
-    ax3.set_title('Pathology 3\nAsymmetric Predictive Capacity')
-    ax3.legend(fontsize=8, loc='upper right')
-    ax3.text(0.02, 0.97, 'C', transform=ax3.transAxes,
-             fontsize=14, fontweight='bold', va='top')
-
-    fig.suptitle(
-        'Three Structural Pathologies of Standard Uncertainty Quantification\n'
-        'under Clinical Class Imbalance  (illustrated at τ = 0.11)',
-        fontsize=13, fontweight='bold', y=1.02
-    )
-
-    path = os.path.join(out_dir, 'fig1_three_pathologies.pdf')
-    plt.savefig(path)
-    plt.close()
-    print(f"Saved: {path}")
-
 
 # ─────────────────────────────────────────────
-# FIG 2 — SENSITIVITY STABILITY (PRIMARY)
+# FIG 3 — SENSITIVITY STABILITY (PRIMARY)
 # ─────────────────────────────────────────────
 
-def fig2_sensitivity_stability(scalars: pd.DataFrame, out_dir: str, n: int = 1000):
+def fig_sensitivity_stability(scalars: pd.DataFrame, out_dir: str, n: int = 1000):
     """
     Print-optimized primary figure for Sensitivity Stability.
     """
@@ -304,18 +169,56 @@ def fig2_sensitivity_stability(scalars: pd.DataFrame, out_dir: str, n: int = 100
                loc='lower center', bbox_to_anchor=(0.5, 0.01),
                ncol=len(by_label), fontsize=10, frameon=False)
 
-    path = os.path.join(out_dir, 'fig2_sensitivity_stability.pdf')
+    path = os.path.join(out_dir, f'fig3_sensitivity_stability_n{n}.pdf')
     plt.savefig(path)
+    print(f"Saved: {path}")
     plt.close()
 
+    # ── Comprehensive Verification Print Block ──
+    if n == 1000:
+        print("\n" + "="*70)
+        print("VERIFICATION")
+        print("="*70)
+
+        # Helper function to safely extract means matching a specific prior
+        def get_val(method_name, target_tau, metric):
+            # Round tau to 2 decimal places to avoid floating-point mismatch
+            subset = df[(df['method'] == method_name) & (df['tau'].round(2) == target_tau)]
+            if subset.empty:
+                return float('nan')
+            return subset[metric].mean()
+
+        # Claim 1: H_Total neutral slope at tau=0.50 (+0.12)
+        h_total_50 = get_val('h_total', 0.50, 'sensitivity_stability')
+        print(f"1. H_Total slope at tau=0.50:            {h_total_50:+.2f}")
+
+        # Claim 2: H_Total extreme deletion at tau=0.10 (-2.08)
+        h_total_10 = get_val('h_total', 0.10, 'sensitivity_stability')
+        print(f"2. H_Total slope at tau=0.10:            {h_total_10:+.2f}")
+
+        # Claim 3: H_tau partial fix at tau=0.10 (-0.26)
+        h_tau_10 = get_val('h_tau', 0.10, 'sensitivity_stability')
+        print(f"3. H_tau slope at tau=0.10:              {h_tau_10:+.2f}")
+
+        # Claim 4: H_tau+CCR bounds across all priors (+0.13 to +0.24)
+        if 'h_tau_ccrc' in df['method'].values:
+            ccrc_means = df[df['method'] == 'h_tau_ccrc'].groupby('tau')['sensitivity_stability'].mean()
+            print(f"4. H_tau+CCR slope bounds (All Taus):    {ccrc_means.min():+.2f} to {ccrc_means.max():+.2f}")
+
+        # Claim 5: Baseline Specificity at tau=0.10 (~0.95)
+        spec_baseline_10 = get_val('h_total', 0.10, 'specificity_at_30pct')
+        print(f"5. Baseline Specificity at tau=0.10:     {spec_baseline_10:.2f}")
+
+        print("="*70 + "\n")
+
 
 # ─────────────────────────────────────────────
-# FIG 3 — STANDARD UQ FAILURE MAP
+# FIG 2 — STANDARD UQ FAILURE MAP
 # ─────────────────────────────────────────────
 
-def fig3_failure_map(scalars: pd.DataFrame, out_dir: str, n: int = 1000):
+def fig_failure_map(scalars: pd.DataFrame, out_dir: str, n: int = 1000):
     """
-    Print-optimized Failure Map (Figure 3).
+    Print-optimized Failure Map (Figure 2).
     """
     set_style()
     df = scalars[scalars['n'] == n].copy()
@@ -367,17 +270,17 @@ def fig3_failure_map(scalars: pd.DataFrame, out_dir: str, n: int = 1000):
 
     
     plt.tight_layout()
-    path = os.path.join(out_dir, 'fig3_failure_map.pdf')
+    path = os.path.join(out_dir, f'fig2_failure_map_n{n}.pdf')
     plt.savefig(path)
     plt.close()
     print(f"Saved: {path}")
 
 
 # ─────────────────────────────────────────────
-# FIG 4 — SEPARABILITY INTERACTION (τ=0.10)
+# FIG — SEPARABILITY INTERACTION (τ=0.10)
 # ─────────────────────────────────────────────
 
-def fig4_separability(scalars: pd.DataFrame, out_dir: str, n: int = 1000):
+def fig_separability(scalars: pd.DataFrame, out_dir: str, n: int = 1000):
     """
     Single panel: sensitivity at 30% rejection vs d, at tau=0.10.
     Main message: H_Total cannot exploit separability. H_tau can.
@@ -404,7 +307,7 @@ def fig4_separability(scalars: pd.DataFrame, out_dir: str, n: int = 1000):
     if len(d1_htotal) > 0 and len(d1_ccrc) > 0:
         ax.annotate(
             f'At identical separability (d=1.0):\n'
-            f'H_Total = {d1_htotal[0]:.2f}  |  H_tau+CCRC = {d1_ccrc[0]:.2f}\n'
+            f'H_Total = {d1_htotal[0]:.2f}  |  H_tau+CCR = {d1_ccrc[0]:.2f}\n'
             f'Standard UQ cannot exploit class structure',
             xy=(1.0, d1_htotal[0]),
             xytext=(1.5, 0.30),
@@ -431,99 +334,99 @@ def fig4_separability(scalars: pd.DataFrame, out_dir: str, n: int = 1000):
         label='Clinical risk zone (sensitivity < 0.5)'
     )
 
-    path = os.path.join(out_dir, 'fig4_separability_interaction.pdf')
+    path = os.path.join(out_dir, 'fig_separability_interaction.pdf')
     plt.savefig(path)
     plt.close()
     print(f"Saved: {path}")
 
 
-# ─────────────────────────────────────────────
-# FIG 5 — ccAUGRC CONCEPTUAL SUMMARY
-# ─────────────────────────────────────────────
-
-def fig5_ccaugrc_concept(scalars: pd.DataFrame, out_dir: str, n: int = 1000):
+# ────────────────────────────────────────────
+# FIG — REJECTION CURVES (APPENDIX)
+# ────────────────────────────────────────────
+def fig_rejection_curves(curves: pd.DataFrame, out_dir: str, n: int = 1000, metric='auprc'):
     """
-    Simple grouped bar chart for one representative condition.
-    tau=0.10, d=0.5 — the MS-like worst case.
-    Three bars per method: Global | Progressor | Stable ccAUGRC.
+    Print-optimized full rejection curves grid for the Appendix.
+    Sized to cleanly occupy an entire standard manuscript page.
     """
     set_style()
+    df = curves[curves['n'] == n].copy()
 
-    cond = scalars[
-        (scalars['n'] == n) &
-        (np.isclose(scalars['tau'], 0.10)) &
-        (np.isclose(scalars['d'], 0.5))
-    ].copy()
+    tau_vals = sorted(df['tau'].unique())
+    d_vals   = sorted(df['d'].unique())
 
-    methods_to_show = ['h_total', 'margin', 'h_tau_ccrc']
-    metrics = ['global_augrc', 'ccaugrc_progressor', 'ccaugrc_stable']
-    metric_labels = ['Global AUGRC', 'Progressor ccAUGRC', 'Stable ccAUGRC']
+    # Map line styles to ensure accessibility (matching main text figures)
+    style_map = {
+        'h_tau_ccrc': {'ls': '-',  'lw': 2.0, 'zorder': 4},
+        'h_tau_ccr':  {'ls': '-',  'lw': 2.0, 'zorder': 4}, # fallback naming
+        'h_tau':      {'ls': '--', 'lw': 1.5, 'zorder': 3},
+        'margin':     {'ls': '-.', 'lw': 1.5, 'zorder': 2},
+        'h_total':    {'ls': ':',  'lw': 1.5, 'zorder': 1}
+    }
 
-    x       = np.arange(len(methods_to_show))
-    width   = 0.22
-    offsets = [-width, 0, width]
+    # 10x11.5 mimics a full page aspect ratio, keeping fonts proportional
+    fig, axes = plt.subplots(len(tau_vals), len(d_vals), figsize=(10, 11.5),
+                             sharex=True, sharey=True)
 
-    fig, ax = plt.subplots(figsize=(12, 6))
+    # Safety catch in case the data only has 1 dimension
+    if len(tau_vals) == 1 and len(d_vals) == 1:
+        axes = np.array([[axes]])
+    elif len(tau_vals) == 1:
+        axes = axes[np.newaxis, :]
+    elif len(d_vals) == 1:
+        axes = axes[:, np.newaxis]
 
-    bar_colors = ['#2C3E50', '#C0392B', '#27AE60']
+    for i, tau in enumerate(tau_vals):
+        for j, d in enumerate(d_vals):
+            ax = axes[i, j]
+            subset = df[(df['tau'] == tau) & (df['d'] == d)]
 
-    for offset, metric, mlabel, bcolor in zip(offsets, metrics, metric_labels, bar_colors):
-        vals = [
-            cond[cond['method'] == m][metric].values[0]
-            if len(cond[cond['method'] == m]) > 0 else np.nan
-            for m in methods_to_show
-        ]
-        bars = ax.bar(
-            x + offset, vals, width,
-            label=mlabel, color=bcolor,
-            alpha=0.85, edgecolor='white', linewidth=1.2
-        )
-        # Value labels on bars
-        for bar, val in zip(bars, vals):
-            if not np.isnan(val):
-                ax.text(
-                    bar.get_x() + bar.get_width()/2,
-                    bar.get_height() + 0.004,
-                    f'{val:.3f}',
-                    ha='center', va='bottom', fontsize=8.5
-                )
+            for method in subset['method'].unique():
+                method_data = subset[subset['method'] == method]
+                
+                ls = style_map.get(method, {}).get('ls', '-')
+                lw = style_map.get(method, {}).get('lw', 1.5)
+                zo = style_map.get(method, {}).get('zorder', 2)
 
-    ax.set_xticks(x)
-    ax.set_xticklabels([LABELS[m] for m in methods_to_show], fontsize=10)
-    ax.set_ylabel('AUGRC Score  (lower = safer)', fontsize=11)
-    ax.set_title(
-        'Global AUGRC Misidentifies the Safer Method\n'
-        'ccAUGRC Decomposition Exposes the True Picture\n'
-        '(τ = 0.10,  d = 0.5,  N = 1000)',
-        fontsize=12, pad=10
-    )
-    ax.legend(fontsize=9, loc='upper left')
-    ax.set_ylim(0, ax.get_ylim()[1] * 1.15)
+                ax.plot(method_data['rejection_rate'], method_data[metric],
+                        label=LABELS.get(method, method), 
+                        color=PALETTE.get(method, '#333333'), 
+                        linewidth=lw, linestyle=ls, zorder=zo)
 
-    # Annotations
-    ax.annotate(
-        'Global AUGRC ranks\nH_Total as safest →\nalgorithmic cowardice',
-        xy=(0 - width, cond[cond['method']=='h_total']['global_augrc'].values[0]),
-        xytext=(-0.4, 0.22),
-        arrowprops=dict(arrowstyle='->', color='#C0392B', lw=1.5),
-        fontsize=8.5, color='#C0392B',
-        bbox=dict(boxstyle='round,pad=0.3', facecolor='#FDEDEC', alpha=0.9)
-    )
-    ax.annotate(
-        'Progressor ccAUGRC\nexposes true risk',
-        xy=(0, cond[cond['method']=='h_total']['ccaugrc_progressor'].values[0]),
-        xytext=(0.5, 0.28),
-        arrowprops=dict(arrowstyle='->', color='#27AE60', lw=1.5),
-        fontsize=8.5, color='#27AE60',
-        bbox=dict(boxstyle='round,pad=0.3', facecolor='#EAFAF1', alpha=0.9)
-    )
+            # Context line matching the main figures
+            ax.axvline(0.30, color='#bdc3c7', ls='--', lw=1.0, alpha=0.6, zorder=0)
 
-    path = os.path.join(out_dir, 'fig5_ccaugrc_concept.pdf')
+            # Clean subplot titles
+            ax.set_title(f'τ = {tau:.2f}  |  d = {d:.1f}', fontsize=10, pad=6)
+            
+            # Standardized ticks and limits
+            ax.tick_params(labelsize=9)
+            ax.set_ylim(0, 1.05)
+            ax.set_xlim(0, 0.8) # Keeps the x-axis consistent with earlier plots
+
+            # Only place labels on the outer edges of the grid
+            if i == len(tau_vals) - 1:
+                ax.set_xlabel('Rejection Rate', fontsize=10)
+            if j == 0:
+                ax.set_ylabel(metric.upper(), fontsize=10)
+
+    # Reserve the bottom 5% of the page for the global legend
+    plt.tight_layout(rect=[0, 0.05, 1, 1], h_pad=1.2, w_pad=1.2)
+
+    # ── Global Legend ──
+    handles, labels = axes[0, 0].get_legend_handles_labels()
+    if handles:
+        by_label = dict(zip(labels, handles))
+        fig.legend(by_label.values(), by_label.keys(),
+                   loc='lower center', 
+                   bbox_to_anchor=(0.5, 0.01),
+                   ncol=min(4, len(by_label)), 
+                   fontsize=11, 
+                   frameon=False)
+
+    path = os.path.join(out_dir, f'figC3_rejection_curves_n{n}_{metric}.pdf')
     plt.savefig(path)
     plt.close()
     print(f"Saved: {path}")
-
-
 
 # ─────────────────────────────────────────────
 # ENTRY POINT
@@ -539,21 +442,19 @@ def main(scalars_path: str, curves_path: str, out_dir: str):
 
     print("\nGenerating figures...\n")
 
-    # ── Synthetic figures (no real data needed) ──
-    print("Fig 1 — Three Pathologies (conceptual)...")
-    fig1_three_pathologies(out_dir)
+    print("sensitivity_stability scaling law...")
+    fig_sensitivity_stability(scalars, out_dir, n=300)
+    fig_sensitivity_stability(scalars, out_dir, n=1000)
 
-    print("Fig 2 — Sensitivity Stability Scaling Law...")
-    fig2_sensitivity_stability(scalars, out_dir, n=1000)
+    print("Standard UQ Failure Map...")
+    fig_failure_map(scalars, out_dir, n=1000)
+    fig_failure_map(scalars, out_dir, n=300)
 
-    print("Fig 3 — Standard UQ Failure Map...")
-    fig3_failure_map(scalars, out_dir, n=1000)
-
-    print("Fig 4 — Separability Interaction at tau=0.10...")
-    fig4_separability(scalars, out_dir, n=1000)
-
-    print("Fig 5 — ccAUGRC Conceptual Summary...")
-    fig5_ccaugrc_concept(scalars, out_dir, n=1000)
+    print("Fig  — Rejection Curves (full curves in Appendix)...")
+    fig_rejection_curves(curves, out_dir, n=300, metric='sensitivity')
+    fig_rejection_curves(curves, out_dir, n=1000, metric='sensitivity')
+    fig_rejection_curves(curves, out_dir, n=300, metric='auprc')
+    fig_rejection_curves(curves, out_dir, n=1000, metric='auprc')
 
     print(f"\nAll figures saved to: {out_dir}")
 
