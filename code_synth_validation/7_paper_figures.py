@@ -19,7 +19,7 @@ Usage
         --curves    ../data/synthetic_results/rejection_curves.csv \
         --out_dir   ../figures/paper/
 """
-
+import matplotlib.patches as patches
 import argparse
 import os
 import warnings
@@ -216,11 +216,17 @@ def fig_sensitivity_stability(scalars: pd.DataFrame, out_dir: str, n: int = 1000
 # FIG 2 — STANDARD UQ FAILURE MAP
 # ─────────────────────────────────────────────
 
+import os
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
 def fig_failure_map(scalars: pd.DataFrame, out_dir: str, n: int = 1000):
     """
-    Print-optimized Failure Map (Figure 2).
+    Print-optimized Failure Map (Figure 2) with Hatched N/A handling.
     """
-    set_style()
+    # set_style()
     df = scalars[scalars['n'] == n].copy()
     metric = 'sensitivity_at_30pct'
 
@@ -236,7 +242,28 @@ def fig_failure_map(scalars: pd.DataFrame, out_dir: str, n: int = 1000):
     grid_ccrc   = make_grid('h_tau_ccrc')
     grid_diff   = grid_ccrc - grid_htotal
 
-    # 1. Print-Optimized Dimensions (10 inches wide)
+    # --- 1. Custom Annotation Arrays ---
+    def build_annot_matrix(grid, fmt_string):
+        annot = np.empty_like(grid, dtype=object)
+        for i in range(grid.shape[0]):
+            for j in range(grid.shape[1]):
+                if np.isnan(grid[i, j]):
+                    annot[i, j] = 'N/A'
+                else:
+                    annot[i, j] = fmt_string.format(grid[i, j])
+        return annot
+
+    annot_htotal = build_annot_matrix(grid_htotal, "{:.1f}")
+    annot_diff = build_annot_matrix(grid_diff, "{:+.1f}")
+
+    # --- 2. Set NaN background to White ---
+    cmap_htotal = plt.get_cmap('RdYlGn').copy()
+    cmap_htotal.set_bad(color='white') 
+
+    cmap_diff = plt.get_cmap('RdBu_r').copy()
+    cmap_diff.set_bad(color='white')
+
+    # --- 3. Plotting ---
     fig, axes = plt.subplots(1, 2, figsize=(10, 5))
 
     kw = dict(
@@ -246,36 +273,47 @@ def fig_failure_map(scalars: pd.DataFrame, out_dir: str, n: int = 1000):
         cbar_kws={'shrink': 0.8}
     )
 
-    # Panel A: H_Total failure map
-    sns.heatmap(grid_htotal, ax=axes[0], vmin=0, vmax=1, cmap='RdYlGn',
-                annot=True, fmt='.1f', annot_kws={'size': 7}, **kw)
-    
-    axes[0].set_title('A   Standard UQ (H_Total)', loc='left', fontsize=12, fontweight='bold', pad=10)
+    # Panel A
+    sns.heatmap(grid_htotal, ax=axes[0], vmin=0, vmax=1, cmap=cmap_htotal,
+                annot=annot_htotal, fmt='', annot_kws={'size': 7}, **kw)
+    axes[0].set_title('A', loc='left', fontsize=12, fontweight='bold', pad=10)
     axes[0].set_xlabel('Separability (d)', fontsize=10)
     axes[0].set_ylabel('Class prior  τ', fontsize=10)
-    cbar0 = axes[0].collections[0].colorbar
-    cbar0.set_label('Sensitivity', fontsize=9)
+    axes[0].collections[0].colorbar.set_label('Sensitivity', fontsize=9)
 
-    # Panel B: Difference map
+    # Panel B
     vmax_diff = max(0.01, np.nanmax(np.abs(grid_diff)))
     sns.heatmap(grid_diff, ax=axes[1], vmin=-vmax_diff, vmax=vmax_diff,
-                cmap='RdBu_r', center=0,
-                annot=True, fmt='+.1f', annot_kws={'size': 7}, **kw)
-    
-    axes[1].set_title('B   Recovery: H_tau + CCR', loc='left', fontsize=12, fontweight='bold', pad=10)
+                cmap=cmap_diff, center=0,
+                annot=annot_diff, fmt='', annot_kws={'size': 7}, **kw)
+    axes[1].set_title('B', loc='left', fontsize=12, fontweight='bold', pad=10)
     axes[1].set_xlabel('Separability (d)', fontsize=10)
     axes[1].set_ylabel('')
-    cbar1 = axes[1].collections[0].colorbar
-    cbar1.set_label('Gain in Sensitivity', fontsize=9)
+    axes[1].collections[0].colorbar.set_label('Gain in Sensitivity', fontsize=9)
 
-    
+# --- 4. Apply Hatching Pattern to NaN Cells ---
+    def add_hatching(ax, grid):
+        for i in range(grid.shape[0]):
+            for j in range(grid.shape[1]):
+                if np.isnan(grid[i, j]):
+                    rect = patches.Rectangle(
+                        (j, i), 1, 1,          
+                        fill=False,            
+                        hatch='....',          # Dense dotted pattern instead of lines
+                        edgecolor='#B0B0B0',   # A softer, light gray (#B0B0B0 or #CCCCCC)
+                        lw=0,                  
+                        zorder=2               
+                    )
+                    ax.add_patch(rect)
+
+    add_hatching(axes[0], grid_htotal)
+    add_hatching(axes[1], grid_diff)
+
     plt.tight_layout()
     path = os.path.join(out_dir, f'fig2_failure_map_n{n}.pdf')
     plt.savefig(path)
     plt.close()
     print(f"Saved: {path}")
-
-
 # ─────────────────────────────────────────────
 # FIG — SEPARABILITY INTERACTION (τ=0.10)
 # ─────────────────────────────────────────────
