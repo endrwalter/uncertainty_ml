@@ -13,17 +13,10 @@ warnings.filterwarnings('ignore')
 
 
 """
-ccaugrc_statistical_test_v2.py
 =============================================================
 Computes bootstrap confidence intervals and statistical tests
 for ccAUGRC differences between methods.
 
-Automatically selects the appropriate approach based on
-minority class size per test split.
-
-
-Approach-> patient bootstrap: used when minority patients
-    per split <= 30, or when only aggregated data is available.
     Bootstraps the full aggregated ensemble (deployment reality).
     Gives 95% CI on the difference between methods.
 

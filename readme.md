@@ -59,6 +59,43 @@ Our cross-disease application revealed that the clinical necessity and functiona
 
 Ultimately, CCRC transitions predictive models from rigid binary classifiers into safe Clinical Decision Support Systems (CDSS). By accurately bounding uncertainty without destroying class integrity, the framework provides a mathematically rigorous mechanism for models to "abstain" from prediction. Deferring the top 20-30% of class-conditioned ambiguous cases to secondary screening or "watchful waiting" represents the necessary operational blueprint for deploying AI in high-stakes, noisy biological environments.
 
-## Repository Structure & Usage
+## Repository Structure
 
-*(specific repository structure, installation instructions, and script usage examples will be added here)*
+code_classification/ 
+    folder contains the code for the classification pipeline, including data preprocessing, model training, and evaluation scripts. files:
+
+    - main_calibrate.py : Implements the dynamic calibrated ensemble generation and uncertainty quantification steps, including nested cross-validation and Sigmoid calibration.
+
+
+
+code_real_world_validation/ f
+    older contains uncertainty quantification and rejection protocol implementation, along with scripts for cross-disease validation for real-world clinical datasets. files: 
+
+    - 1_h_ensemble.py : implements the asynchronous aggregation of all ml models
+    - 2_compute_uncertainy_metrics.py : implements the computation of total predictive uncertainty and class-conditioned rejection curves
+    - 3_compute_stats.py : implements the computation of bootstrap confidence intervals and statistical tests for ccAUGRC differences between methods.
+    - 4,5,6 plots
+
+
+code_synth_validation/ 
+    folder contains scripts for synthetic data generation and validation, allowing for controlled experiments to test the robustness of the proposed methods. files:
+    1_synthetic_generator.py : generates synthetic datasets with varying levels of class imbalance and noise.
+    2_generate_synthetic_configs.py : Reads synthetic_data/manifest.csv and generates:
+        - One config.ini per condition under synthetic_data/<condition>/config.ini
+        - A commands file (synthetic_commands.txt) listing one command per line, ready to be indexed by SLURM_ARRAY_TASK_ID in the sbatch script
+    3_compute_stats.py :
+    Computes bootstrap confidence intervals and statistical tests for ccAUGRC differences between methods.
+
+    4_compute_uncertainty_scores.py : implements the computation of total predictive uncertainty and class-conditioned rejection curves for synthetic datasets.
+
+    5_compute_rejection_metrics.py : implements the computation of rejection metrics for synthetic datasets.
+
+    7_paper_figures.py : figures.
+
+    
+adni-specific folders:
+ - code_data_prep_adni/ folder contains scripts for preprocessing the ADNI dataset, including data cleaning, feature extraction, and formatting for model training.
+ -code_evaluate_adni/ folder contains scripts for evaluating model performance on the ADNI dataset, including metrics calculation and visualization of results.
+
+
+
