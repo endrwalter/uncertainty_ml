@@ -4,7 +4,7 @@ plot_statistical_results.py
 Loads all_statistical_tests.csv and produces:
 
 1. A printed summary table for both Progressor and Stable ccAUGRC
-2. A publication-ready figure: grouped bar chart with 95% CI error bars
+2. A figure: grouped bar chart with 95% CI error bars
    and significance annotations for all three diseases
 
 Usage

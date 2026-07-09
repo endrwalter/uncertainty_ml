@@ -41,8 +41,6 @@ def fig8_ccaugrc_real_table(ccaugrc_data: pd.DataFrame, out_dir: str):
     Three groups of bars (Global | Progressor | Stable ccAUGRC),
     one cluster per disease × method combination.
 
-    This replaces the broken table approach with a figure that
-    communicates the same information more clearly.
     """
     plt.rcParams.update({
         'font.family':       'serif',

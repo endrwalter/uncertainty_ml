@@ -24,6 +24,7 @@ To ensure the pipeline is robust across varying degrees of biological noise and 
 * **Multiple Sclerosis (PIRA, $\tau=0.13$):** A severely imbalanced cohort testing CCR as a mandatory rescue mechanism against systemic minority-class collapse.
 * **Alzheimer’s Disease (36-Month MCI to AD, $\tau=0.54$):** A near-balanced cohort testing the framework's ability to safely converge to baseline behavior.
 
+**5. synthetic validation**
 ---
 
 ### Main Findings 
@@ -84,7 +85,7 @@ code_synth_validation/
 
     7_paper_figures.py : figures.
 
-    
+
 adni-specific folders:
  - code_data_prep_adni/ folder contains scripts for preprocessing the ADNI dataset, including data cleaning, feature extraction, and formatting for model training.
  -code_evaluate_adni/ folder contains scripts for evaluating model performance on the ADNI dataset, including metrics calculation and visualization of results.

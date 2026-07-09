@@ -101,8 +101,10 @@ def fig_sensitivity_stability(scalars: pd.DataFrame, out_dir: str, n: int = 1000
                             height_ratios=[1.5, 1],
                             hspace=0.45, wspace=0.3)
 
+
     # ── Main panel: sensitivity stability ──
     ax_main = fig.add_subplot(gs[0, :])
+    ax_main.margins(x=0)
 
     for method in methods_to_show:
         sub  = df[df['method'] == method].groupby('tau')['sensitivity_stability']
@@ -123,7 +125,7 @@ def fig_sensitivity_stability(scalars: pd.DataFrame, out_dir: str, n: int = 1000
     
     # Annotation
     min_val = df[df['method']=='h_total']['sensitivity_stability'].min()
-    ax_main.axhspan(min_val * 1.05, -0.3, alpha=0.06, color='#C0392B')
+    #ax_main.axhspan(min_val * 1.05, -0.3, alpha=0.06, color='#C0392B')
 
 
     ax_main.set_xlabel('Class Prior  τ', fontsize=10)
@@ -133,6 +135,8 @@ def fig_sensitivity_stability(scalars: pd.DataFrame, out_dir: str, n: int = 1000
 
     # ── Supporting panel left: sensitivity at 30% ──
     ax_s = fig.add_subplot(gs[1, 0])
+    ax_s.margins(x=0)
+
     for method in methods_to_show:
         sub = df[df['method'] == method].groupby('tau')['sensitivity_at_30pct']
         ax_s.plot(sub.mean().index, sub.mean().values, color=PALETTE[method], marker='o', lw=1.5, ms=4)
@@ -147,6 +151,7 @@ def fig_sensitivity_stability(scalars: pd.DataFrame, out_dir: str, n: int = 1000
 
     # ── Supporting panel right: specificity at 30% ──
     ax_c = fig.add_subplot(gs[1, 1])
+    ax_c.margins(x=0)
     for method in methods_to_show:
         sub = df[df['method'] == method].groupby('tau')['specificity_at_30pct']
         ax_c.plot(sub.mean().index, sub.mean().values, color=PALETTE[method], marker='o', lw=1.5, ms=4)
