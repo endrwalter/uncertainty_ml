@@ -1,7 +1,9 @@
-## Research Concept
 # Uncertainty and Rejection under Clinical Class Imbalance
 
 *(Add DOI/Publication badge here once published)*
+
+![Workflow Methodology](./figures/readme/method.png)
+*Figure 1: Dynamic Calibrated Ensemble Generation and Uncertainty Quantification Workflow.*
 
 ## Research Concept
 Standard machine learning evaluation assumes predictive uncertainty can be thresholded independently of a dataset's class prior. In clinical practice, this assumption fails catastrophically. To safely translate predictive models into actionable Clinical Decision Support Systems (CDSS) without abandoning high-risk minority patients, we implemented the following workflow:
@@ -24,10 +26,15 @@ To ensure the pipeline is robust across varying degrees of biological noise and 
 * **Multiple Sclerosis (PIRA, $\tau=0.13$):** A severely imbalanced cohort testing CCR as a mandatory rescue mechanism against systemic minority-class collapse.
 * **Alzheimer’s Disease (36-Month MCI to AD, $\tau=0.54$):** A near-balanced cohort testing the framework's ability to safely converge to baseline behavior.
 
-**5. synthetic validation**
+**5. Synthetic Validation**
+A controlled experimental environment mapping the phase diagram of algorithmic failure across varying degrees of synthetic noise and imbalance.
+
 ---
 
-### Main Findings 
+![Vulnerabilities under Imbalance](./figures/readme/vulnerabilities.png)
+*Figure 2: Structural uncertainty divergence and the threshold-entropy mismatch under clinical class imbalance.*
+
+## Main Findings 
 
 **1. Structural Uncertainty Divergence**
 Across multiple clinical forecasting domains, we observed that predictive uncertainty is structurally concentrated on the minority class. Due to inherent epistemic sparsity, minority-class predictions carry systematically higher ensemble variance than majority predictions—even when evaluated at the exact same distance from the decision boundary.
@@ -79,3 +86,129 @@ The codebase is organized into modular directories handling the core classificat
 ### ADNI-Specific Pipelines
 * **`code_data_prep_adni/`**: Handles ADNI dataset preprocessing, including data cleaning, feature extraction, and formatting for model training.
 * **`code_evaluate_adni/`**: Evaluates model performance specifically on the ADNI dataset, including metric calculation and results visualization.
+
+---
+
+## Usage Guide: Synthetic Validation
+
+**Important Note:** Before executing these steps, please ensure you check and update all file and directory paths in the commands below to match your local repository structure.
+
+### Step 1 - Generate the data 
+```bash
+python3 1_synthetic_generator.py
+```
+*Creates `synthetic_data/` with 56 condition folders and a `manifest.csv`.*
+
+### Step 2 - Generate configs and commands file (once)
+```bash
+python3 2_generate_synthetic_configs.py \
+    --manifest  ../data/synthetic_data/manifest.csv \
+    --template  config_synthetic_template.ini \
+    --code_path ../code_classification \
+    --script    main_calibrate.py \
+    --output    ../data/synthetic_data/synthetic_commands.txt
+```
+
+### Step 3 - Submit the array
+```bash
+sbatch sbatch_synthetic_.sh
+```
+
+### Step 4 - Create the ensemble predictions
+```bash
+python3 3_build_h_ensembles.py \
+    --manifest     ../data/synthetic_data/manifest.csv \
+    --results_root ../data/synthetic_results
+```
+
+### Step 5 - Compute uncertainty scores
+
+```bash
+python3 4_compute_uncertainty_scores.py \
+    --input  ../data/synthetic_results/all_conditions_summary.csv \
+    --output ../data/synthetic_results/all_conditions_uncertainty.csv
+```
+
+### Step 6 - Compute rejection metrics
+```bash
+python3 5_compute_rejection_metrics.py \
+    --input   ../data/synthetic_results/all_conditions_uncertainty.csv \
+    --out_dir ../data/synthetic_results
+```
+
+### Step 7 - Generate all figures
+```bash
+python3 6_visualize_phase_diagram.py \
+    --scalars ../data/synthetic_results/scalar_summaries.csv \
+    --curves  ../data/synthetic_results/rejection_curves.csv \
+    --out_dir ../figures/synthetic
+```
+
+---
+
+## Usage Guide: Real-World Validation
+
+### Step 1 - Generate Heterogeneous Ensembles
+Creates the aggregated ensemble predictions for Parkinson's Disease (PD), Multiple Sclerosis (MS), and Alzheimer's Disease (AD).
+```bash
+python3 1_h_ensemble.py ../results/classification/pd_dyskinesia/FutureDyskinesia
+python3 1_h_ensemble.py ../results/classification/ms_progression/progression_independent_from_relapses
+python3 1_h_ensemble.py ../results/classification/mci_ad_conversion/label_bl_36m
+```
+
+### Step 2 - Compute Uncertainty Metrics
+Computes total predictive uncertainty and class-conditioned rejection curves.
+```bash
+python3 2_compute_uncertainty_metrics.py \
+    --ms_path  ../results/classification/ms_progression/progression_independent_from_relapses/aggregated/patient_mean_probs_progression_independent_from_relapses_ms_progression_model.csv \
+    --pd_path  ../results/classification/pd_dyskinesia/FutureDyskinesia/aggregated/patient_mean_probs_FutureDyskinesia_pd_dyskinesia_model.csv \
+    --ad_path  ../results/classification/mci_ad_conversion/label_bl_36m/aggregated/patient_mean_probs_label_bl_36m_mci_ad_conversion_model.csv \
+    --out_dir  ../results/real_world_results/
+```
+
+### Step 3 - Compute Statistics
+Computes bootstrap confidence intervals and statistical tests for ccAUGRC differences between methods. Bootstraps the full aggregated ensemble (deployment reality) and provides a 95% CI on the difference between methods.
+```bash
+python3 3_compute_stats.py \
+    --ms_summary ../results/classification/ms_progression/progression_independent_from_relapses/aggregated/patient_mean_probs_progression_independent_from_relapses_ms_progression_model.csv \
+    --pd_summary ../results/classification/pd_dyskinesia/FutureDyskinesia/aggregated/patient_mean_probs_FutureDyskinesia_pd_dyskinesia_model.csv \
+    --ad_summary ../results/classification/mci_ad_conversion/label_bl_36m/aggregated/patient_mean_probs_label_bl_36m_mci_ad_conversion_model.csv \
+    --out_dir ../results/statistical_tests/
+```
+
+### Step 4 - Plot Statistical Tests (AUGRC)
+Generates a printed summary table for both Progressor and Stable ccAUGRC, alongside a grouped bar chart figure with 95% CI error bars and significance annotations for all three diseases.
+```bash
+python3 4_plot_statistical_results_augrc.py \
+    --tests   ../results/statistical_tests/all_statistical_tests.csv \
+    --distrib ../results/statistical_tests/ \
+    --out_dir ../figures/paper/
+```
+
+### Step 5 - Plot Results
+Generates the final manuscript figures:
+* **Fig 6**: Real-world — Rejection Curves MS / PD / AD
+* **Fig 7**: Real-world — Asymmetry Test
+* **Fig 8**: Real-world — ccAUGRC Decomposition Table
+
+```bash
+python3 5_plot_results.py \
+    --real_dir  ../results/real_world_results/ \
+    --out_dir   ../figures/paper/
+```
+
+---
+
+## Dependencies
+
+The core pipeline requires a standard scientific Python stack. Primary dependencies include:
+* `python >= 3.8`
+* `scikit-learn`
+* `pandas`
+* `numpy`
+* `shap`
+* `matplotlib` & `seaborn`
+
+## Citation
+
+---
