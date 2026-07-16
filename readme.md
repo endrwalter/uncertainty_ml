@@ -54,41 +54,28 @@ CCR transitions predictive models from rigid binary classifiers into safe CDSS. 
 
 ## Repository Structure
 
-code_classification/ 
-    folder contains the code for the classification pipeline, including data preprocessing, model training, and evaluation scripts. files:
+The codebase is organized into modular directories handling the core classification pipeline, validation on both real-world and synthetic datasets, and dataset-specific preprocessing.
 
-    - main_calibrate.py : Implements the dynamic calibrated ensemble generation and uncertainty quantification steps, including nested cross-validation and Sigmoid calibration.
+### Core Pipeline
+* **`code_classification/`**: Contains the main classification pipeline, including data preprocessing, model training, and evaluation scripts.
+  * `main_calibrate.py`: Implements dynamic calibrated ensemble generation, nested cross-validation, and Sigmoid calibration for uncertainty quantification.
 
+### Real-World Validation
+* **`code_real_world_validation/`**: Implements the uncertainty quantification (UQ) and rejection protocol for cross-disease validation on real-world clinical datasets.
+  * `1_h_ensemble.py`: Handles the asynchronous aggregation of all machine learning models.
+  * `2_compute_uncertainy_metrics.py`: Computes total predictive uncertainty and class-conditioned rejection curves.
+  * `3_compute_stats.py`: Calculates bootstrap confidence intervals and performs statistical tests for ccAUGRC differences between methods.
+  * `4_plots`, `5_plots`, `6_plots`: Scripts to generate figures and visualizations for the real-world validation results.
 
+### Synthetic Validation
+* **`code_synth_validation/`**: Contains scripts for generating synthetic data and conducting controlled experiments to test method robustness.
+  * `1_synthetic_generator.py`: Generates synthetic datasets with configurable levels of class imbalance and noise.
+  * `2_generate_synthetic_configs.py`: Reads `synthetic_data/manifest.csv` to generate condition-specific `config.ini` files and a SLURM-compatible commands file (`synthetic_commands.txt`) indexed by `SLURM_ARRAY_TASK_ID`.
+  * `3_compute_stats.py`: Calculates bootstrap confidence intervals and statistical tests for ccAUGRC differences.
+  * `4_compute_uncertainty_scores.py`: Computes total predictive uncertainty and class-conditioned rejection curves for the synthetic datasets.
+  * `5_compute_rejection_metrics.py`: Calculates specialized rejection metrics.
+  * `7_paper_figures.py`: Generates figures for the manuscript based on synthetic validation results.
 
-code_real_world_validation/ f
-    older contains uncertainty quantification and rejection protocol implementation, along with scripts for cross-disease validation for real-world clinical datasets. files: 
-
-    - 1_h_ensemble.py : implements the asynchronous aggregation of all ml models
-    - 2_compute_uncertainy_metrics.py : implements the computation of total predictive uncertainty and class-conditioned rejection curves
-    - 3_compute_stats.py : implements the computation of bootstrap confidence intervals and statistical tests for ccAUGRC differences between methods.
-    - 4,5,6 plots
-
-
-code_synth_validation/ 
-    folder contains scripts for synthetic data generation and validation, allowing for controlled experiments to test the robustness of the proposed methods. files:
-    1_synthetic_generator.py : generates synthetic datasets with varying levels of class imbalance and noise.
-    2_generate_synthetic_configs.py : Reads synthetic_data/manifest.csv and generates:
-        - One config.ini per condition under synthetic_data/<condition>/config.ini
-        - A commands file (synthetic_commands.txt) listing one command per line, ready to be indexed by SLURM_ARRAY_TASK_ID in the sbatch script
-    3_compute_stats.py :
-    Computes bootstrap confidence intervals and statistical tests for ccAUGRC differences between methods.
-
-    4_compute_uncertainty_scores.py : implements the computation of total predictive uncertainty and class-conditioned rejection curves for synthetic datasets.
-
-    5_compute_rejection_metrics.py : implements the computation of rejection metrics for synthetic datasets.
-
-    7_paper_figures.py : figures.
-
-
-adni-specific folders:
- - code_data_prep_adni/ folder contains scripts for preprocessing the ADNI dataset, including data cleaning, feature extraction, and formatting for model training.
- -code_evaluate_adni/ folder contains scripts for evaluating model performance on the ADNI dataset, including metrics calculation and visualization of results.
-
-
-
+### ADNI-Specific Pipelines
+* **`code_data_prep_adni/`**: Handles ADNI dataset preprocessing, including data cleaning, feature extraction, and formatting for model training.
+* **`code_evaluate_adni/`**: Evaluates model performance specifically on the ADNI dataset, including metric calculation and results visualization.
