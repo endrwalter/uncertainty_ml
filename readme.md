@@ -1,6 +1,5 @@
 # Uncertainty and Rejection under Clinical Class Imbalance
 
-*(Add DOI/Publication badge here once published)*
 
 ![Workflow Methodology](./figures/readme/method.png)
 *Figure 1: Dynamic Calibrated Ensemble Generation and Uncertainty Quantification Workflow.*
