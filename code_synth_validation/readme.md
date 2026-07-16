@@ -29,7 +29,6 @@ python3 3_build_h_ensembles.py \
 ```
 
 ### Step 5 - Compute uncertainty scores
-*(Takes ~1 min)*
 ```bash
 python3 4_compute_uncertainty_scores.py \
     --input  ../data/synthetic_results/all_conditions_summary.csv \
@@ -37,7 +36,6 @@ python3 4_compute_uncertainty_scores.py \
 ```
 
 ### Step 6 - Compute rejection metrics
-*(Takes ~10-20 min for 56 conditions)*
 ```bash
 python3 5_compute_rejection_metrics.py \
     --input   ../data/synthetic_results/all_conditions_uncertainty.csv \
