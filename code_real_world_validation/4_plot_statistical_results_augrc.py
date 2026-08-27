@@ -30,7 +30,7 @@ warnings.filterwarnings('ignore')
 # ─────────────────────────────────────────────
 # CONFIGURATION
 # ─────────────────────────────────────────────
-METHODS_ORDER = ['h_total', 'margin', 'h_tau', 'random_ccr', 'h_tau_ccr']
+METHODS_ORDER = ['h_total', 'margin', 'h_tau', 'random_ccr', 'h_total_ccr', 'margin_ccr', 'h_tau_ccr']
 
 METHOD_LABELS = {
     'h_total':    'H_Total\n(Global)',
@@ -38,6 +38,8 @@ METHOD_LABELS = {
     'h_tau':      'H_tau\n(Global)',
     'random_ccr': 'Random+ccr\n(Control)',
     'h_tau_ccr':  'H_tau+ccr\n(Proposed)',
+    'h_total_ccr': 'H_Total + CCR (Control)',
+    'margin_ccr': 'Margin + CCR (Control)',
 }
 
 METHOD_LABELS_SHORT = {
@@ -46,6 +48,8 @@ METHOD_LABELS_SHORT = {
     'h_tau':      'H_tau',
     'random_ccr': 'Random+ccr',
     'h_tau_ccr':  'H_tau+ccr',
+    'h_total_ccr': 'H_Total+ccr',
+    'margin_ccr': 'Margin+ccr',
 }
 
 PALETTE = {
@@ -54,6 +58,8 @@ PALETTE = {
     'h_tau':      '#2980B9', # Blue
     'random_ccr': '#8E44AD', # Purple (New for Random+ccr)
     'h_tau_ccr':  '#27AE60', # Green
+    'h_total_ccr': "#636161", # Gray
+    'margin_ccr': "#D9B112", # Light Blue
 }
 
 DISEASES_ORDER = ['MS', 'PD', 'AD']
@@ -64,6 +70,7 @@ DISEASE_LABELS = {
 }
 
 REFERENCE = 'h_tau_ccr'
+
 
 
 # ─────────────────────────────────────────────
@@ -77,16 +84,16 @@ def sig_marker(p):
     return 'ns'
 
 
-def print_full_table(tests: pd.DataFrame, distributions: dict):
+def print_full_table(tests: pd.DataFrame, distributions: dict, metrics = [
+        ('ccaugrc_progressor', 'Progressor ccAUGRC'),
+        ('ccaugrc_stable',     'Stable ccAUGRC'),
+        ('global_augrc',       'Global AUGRC'),
+    ]):
     """
     Print a complete table with point estimates [95% CI] and
     significance markers for both Progressor and Stable ccAUGRC.
     """
-    metrics = [
-        ('ccaugrc_progressor', 'Progressor ccAUGRC'),
-        ('ccaugrc_stable',     'Stable ccAUGRC'),
-        ('global_augrc',       'Global AUGRC'),
-    ]
+
 
     for disease in DISEASES_ORDER:
         print(f"\n{'═'*90}")
@@ -152,201 +159,115 @@ def print_full_table(tests: pd.DataFrame, distributions: dict):
         print(f"  ↓better = comparison method has lower (better) ccAUGRC than reference")
 
 
-# ─────────────────────────────────────────────
-# FIGURE
-# ─────────────────────────────────────────────
-
-def plot_results(tests: pd.DataFrame, distributions: dict, out_dir: str):
+def save_full_table_latex(tests: pd.DataFrame, distributions: dict, out_path: str):
     """
-    Two-row figure:
-    Row 1: Progressor ccAUGRC — grouped bars with CI + significance
-    Row 2: Stable ccAUGRC — same layout
-
-    Three columns: MS, PD, AD
+    Generates a publication-ready LaTeX table matching the strict multirow format.
+    Combines point estimates, CIs, and significance superscripts into single cells.
     """
-    plt.rcParams.update({
-        'font.family':       'serif',
-        'font.size':         10,
-        'axes.spines.top':   False,
-        'axes.spines.right': False,
-        'axes.grid':         True,
-        'grid.alpha':        0.25,
-        'grid.linestyle':    '--',
-        'axes.grid.axis':         'y',
-        'figure.dpi':        150,
-        'savefig.dpi':       300,
-        'savefig.bbox':      'tight',
-    })
+    # Mapping for  LaTeX method names
+    latex_method_names = {
+        'h_total':     r'$H_{\text{Total}}$ (Global)',
+        'margin':      r'Margin (Global)',
+        'h_tau':       r'$H_\tau$ (Global)',
+        'random_ccr':  r'Random + CCR',
+        'h_total_ccr': r'$H_{\text{Total}}$ + CCR',
+        'margin_ccr':  r'Margin + CCR',
+        'h_tau_ccr':   r'$H_\tau$ + CCR'
+    }
 
     metrics = [
-        ('ccaugrc_progressor', 'Progressor ccAUGRC\n(lower = safer)', 'minority protection'),
-        ('ccaugrc_stable',     'Stable ccAUGRC\n(lower = safer)',     'majority protection'),
+        ('ccaugrc_progressor', 'Progressor ccAUGRC'),
+        ('ccaugrc_stable',     'Stable ccAUGRC'),
+        ('global_augrc',       'Global AUGRC'),
     ]
+        
+    lines = []
+    lines.append(r"\begin{table*}[htbp]")
+    lines.append(r"\centering")
+    lines.append(r"\resizebox{\textwidth}{!}{")
+    lines.append(r"\begin{tabular}{l l l l l}")
+    lines.append(r"\toprule")
+    
+    # Header Row
+    lines.append(r"Dataset & Uncertainty Framework & Progressor ccAUGRC (95\% CI) & Stable ccAUGRC (95\% CI) & Global AUGRC (95\% CI) \\")
+    
+    num_methods = len(METHODS_ORDER)
 
-    n_methods  = len(METHODS_ORDER)
-    bar_width  = 0.18
-    x_center   = 0.0
-    offsets    = np.linspace(
-        -(n_methods-1)/2 * bar_width,
-         (n_methods-1)/2 * bar_width,
-        n_methods
-    )
-
-    fig, axes = plt.subplots(2, 3, figsize=(20, 11), sharey=False)
-    fig.suptitle(
-        'ccAUGRC Decomposition — Real-World Cohorts\n'
-        '95% CI from 1,000-iteration patient bootstrap  |  '
-        'Significance vs H_tau+ccr (Proposed)',
-        fontsize=13, fontweight='bold'
-    )
-
-    for row_idx, (metric, ylabel, subtitle) in enumerate(metrics):
-        for col_idx, disease in enumerate(DISEASES_ORDER):
-            ax       = axes[row_idx][col_idx]
-            dist_df  = distributions.get(disease)
-
-            means, ci_lows, ci_highs = [], [], []
-
-            for method in METHODS_ORDER:
+    for i, disease in enumerate(DISEASES_ORDER):
+        lines.append(r"\midrule")
+        
+        # Parse "MS  (τ=0.11)" into "MS" and "0.11"
+        raw_label = DISEASE_LABELS[disease]
+        dis_name = raw_label.split(' ')[0]
+        tau_val = raw_label.split('=')[1].replace(')', '')
+        
+        multirow_def = f"\\multirow{{{num_methods}}}{{*}}{{\\textbf{{{dis_name}}} ($\\tau={tau_val}$)}}"
+        
+        dist_df = distributions.get(disease)
+        
+        for j, method in enumerate(METHODS_ORDER):
+            # Dataset Column (only populated on the first row of the disease block)
+            col_dataset = multirow_def if j == 0 else " "
+            
+            # Method Column (bold if it's the reference)
+            meth_name = latex_method_names.get(method, method)
+            col_method = f"\\textbf{{{meth_name}}}" if method == REFERENCE else meth_name
+            
+            row_cells = [col_dataset, col_method]
+            
+            for metric, _ in metrics:
+                # 1. Get Point Estimate and CI
                 if dist_df is not None and method in dist_df['method'].values:
-                    vals = dist_df[dist_df['method'] == method][metric].values
-                    means.append(vals.mean())
-                    ci_lows.append(np.percentile(vals, 2.5))
-                    ci_highs.append(np.percentile(vals, 97.5))
+                    vals = dist_df[dist_df['method'] == method][metric].dropna().values
+                    if len(vals) > 0:
+                        mean_val = np.nanmean(vals)
+                        ci_low   = np.nanpercentile(vals, 2.5)
+                        ci_high  = np.nanpercentile(vals, 97.5)
+                        est_str  = f"{mean_val:.4f} [{ci_low:.4f}, {ci_high:.4f}]"
+                    else:
+                        est_str = "--"
                 else:
-                    means.append(np.nan)
-                    ci_lows.append(np.nan)
-                    ci_highs.append(np.nan)
-
-            # Draw bars
-            for m_idx, method in enumerate(METHODS_ORDER):
-                xpos  = x_center + offsets[m_idx]
-                mean  = means[m_idx]
-                ci_lo = ci_lows[m_idx]
-                ci_hi = ci_highs[m_idx]
-
-                if np.isnan(mean):
-                    continue
-
-                bar = ax.bar(
-                    xpos, mean,
-                    width=bar_width * 0.9,
-                    color=PALETTE[method],
-                    alpha=0.85 if method != REFERENCE else 1.0,
-                    edgecolor='black' if method == REFERENCE else 'white',
-                    linewidth=1.5 if method == REFERENCE else 0.5,
-                    zorder=3,
-                    label=METHOD_LABELS_SHORT[method],
-                )
-
-                # Error bars (95% CI)
-                ax.errorbar(
-                    xpos, mean,
-                    yerr=[[mean - ci_lo], [ci_hi - mean]],
-                    fmt='none',
-                    color='#2C3E50',
-                    capsize=4,
-                    capthick=1.5,
-                    elinewidth=1.5,
-                    zorder=4,
-                )
-
-                # Value label on bar
-                ax.text(
-                    xpos, ci_hi + 0.003,
-                    f'{mean:.3f}',
-                    ha='center', va='bottom',
-                    fontsize=7.5, color='#2C3E50',
-                    zorder=5,
-                )
-
-            # Significance annotations vs reference
-            ref_mean = means[METHODS_ORDER.index(REFERENCE)]
-            ref_ci_hi = ci_highs[METHODS_ORDER.index(REFERENCE)]
-            y_max = max([h for h in ci_highs if not np.isnan(h)]) + 0.015
-
-            bracket_y_start = y_max + 0.005
-            bracket_step    = 0.022
-
-            for m_idx, method in enumerate(METHODS_ORDER):
+                    est_str = "--"
+                    
+                # 2. Get Significance Superscript (Skip for Global AUGRC and Reference Method)
+                sup_str = ""
+                if metric != 'global_augrc' and method != REFERENCE and est_str != "--":
+                    sub = tests[
+                        (tests['disease'] == disease) &
+                        (tests['metric'] == metric) &
+                        (tests['comparison_method'] == method)
+                    ]
+                    if len(sub) > 0:
+                        row = sub.iloc[0]
+                        direction = r"\uparrow" if row['mean_difference'] > 0 else r"\downarrow"
+                        p_marker = sig_marker(row['p_value'])
+                        if p_marker == 'ns': 
+                            p_marker = r"\text{ns}"
+                        sup_str = f"$^{{{direction}{p_marker}}}$"
+                
+                # Combine Estimate, CI, and Superscript
+                cell_str = f"{est_str}{sup_str}"
+                
+                # Bold the entire cell if it's the reference method
                 if method == REFERENCE:
-                    continue
-
-                sub = tests[
-                    (tests['disease'] == disease) &
-                    (tests['metric'] == metric) &
-                    (tests['comparison_method'] == method)
-                ]
-                if sub.empty:
-                    continue
-
-                row = sub.iloc[0]
-                sig = sig_marker(row['p_value'])
-                if sig == 'ns':
-                    continue
-
-                xpos_comp = x_center + offsets[m_idx]
-                xpos_ref  = x_center + offsets[METHODS_ORDER.index(REFERENCE)]
-                brac_y    = bracket_y_start + (m_idx * bracket_step)
-
-                # Bracket
-                ax.plot(
-                    [xpos_comp, xpos_comp, xpos_ref, xpos_ref],
-                    [brac_y - 0.003, brac_y, brac_y, brac_y - 0.003],
-                    color='#2C3E50', linewidth=1.0, zorder=6
-                )
-                ax.text(
-                    (xpos_comp + xpos_ref) / 2, brac_y + 0.001,
-                    sig,
-                    ha='center', va='bottom',
-                    fontsize=9, fontweight='bold', color='#2C3E50',
-                    zorder=7,
-                )
-
-            # Axis formatting
-            all_means = [m for m in means if not np.isnan(m)]
-            y_ceiling = bracket_y_start + (n_methods * bracket_step) + 0.01
-            ax.set_ylim(0, max(y_ceiling, max(all_means) * 1.4) if all_means else 0.4)
-            ax.set_xticks([x_center])
-            ax.set_xticklabels([''])
-            ax.set_xlim(-0.5, 0.5)
-
-            if col_idx == 0:
-                ax.set_ylabel(ylabel, fontsize=10)
-            if row_idx == 0:
-                ax.set_title(
-                    f'{DISEASE_LABELS[disease]}',
-                    fontsize=11, fontweight='bold', pad=8
-                )
-
-            # Shade reference bar lightly
-            ax.axhline(ref_mean, color=PALETTE[REFERENCE],
-                       ls='--', lw=1.0, alpha=0.4, zorder=2)
-
-    # Legend
-    legend_patches = [
-        mpatches.Patch(
-            color=PALETTE[m], alpha=0.85,
-            label=METHOD_LABELS_SHORT[m] + (' (Proposed)' if m == REFERENCE else '')
-        )
-        for m in METHODS_ORDER
-    ]
-    fig.legend(
-        handles=legend_patches,
-        loc='lower center',
-        ncol=4,
-        fontsize=9,
-        framealpha=0.9,
-        bbox_to_anchor=(0.5, -0.02),
-    )
-
-    plt.tight_layout(rect=[0, 0.04, 1, 1])
-
-    path = os.path.join(out_dir, 'fig_statistical_ccaugrc.pdf')
-    plt.savefig(path)
-    plt.close()
-    print(f"\nSaved figure: {path}")
-
+                    cell_str = f"\\textbf{{{cell_str}}}"
+                    
+                row_cells.append(cell_str)
+                
+            # Join row with & and end with \\
+            lines.append(" & ".join(row_cells) + r" \\")
+            
+    # Close the table
+    lines.append(r"\bottomrule")
+    lines.append(r"\end{tabular}")
+    lines.append(r"}")
+    lines.append(r"\end{table*}")
+    
+    # Save to file
+    with open(out_path, 'w', encoding='utf-8') as f:
+        f.write("\n".join(lines))
+        
+    print(f"\nLaTeX table saved successfully to: {out_path}")
 
 # ─────────────────────────────────────────────
 # LOAD DISTRIBUTIONS
@@ -373,6 +294,20 @@ def load_distributions(distrib_dir: str) -> dict:
 # ─────────────────────────────────────────────
 
 if __name__ == '__main__':
+
+    available_metrics = [
+            ('ccaugrc_progressor', 'Progressor ccAUGRC'),
+            ('ccaugrc_stable',     'Stable ccAUGRC'),
+            ('global_augrc',       'Global AUGRC')
+    ]
+
+
+    available_metrics_cs = [
+            ('cs_ccaugrc_progressor', 'Progressor ccAUGRC (Common Support)'),
+            ('cs_ccaugrc_stable',     'Stable ccAUGRC (Common Support)'),
+            ('cs_global_augrc',       'Global AUGRC (Common Support)'),
+        ]
+
     parser = argparse.ArgumentParser()
     parser.add_argument('--tests',   required=True,
                         help='all_statistical_tests.csv')
@@ -391,7 +326,6 @@ if __name__ == '__main__':
     print("\n" + "═"*90)
     print("STATISTICAL SUMMARY TABLE")
     print("═"*90)
-    print_full_table(tests, distributions)
+    print_full_table(tests, distributions, metrics = available_metrics)
+    save_full_table_latex(tests, distributions, out_path=os.path.join(args.out_dir, "statistical_summary.tex"))
 
-    print("\nGenerating figure...")
-    plot_results(tests, distributions, args.out_dir)
