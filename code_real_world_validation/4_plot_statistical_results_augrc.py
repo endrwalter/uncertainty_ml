@@ -30,7 +30,7 @@ warnings.filterwarnings('ignore')
 # ─────────────────────────────────────────────
 # CONFIGURATION
 # ─────────────────────────────────────────────
-METHODS_ORDER = ['h_total', 'margin', 'h_tau', 'random_ccr', 'h_total_ccr', 'margin_ccr', 'h_tau_ccr']
+METHODS_ORDER = ['h_total', 'margin', 'h_tau', 'random_ccr', 'h_total_ccr', 'h_tau_ccr']
 
 METHOD_LABELS = {
     'h_total':    'H_Total\n(Global)',
@@ -71,7 +71,34 @@ DISEASE_LABELS = {
 
 REFERENCE = 'h_tau_ccr'
 
-
+def apply_holm_bonferroni(tests_df: pd.DataFrame, alpha: float = 0.05) -> pd.DataFrame:
+    """
+    Applies the Holm-Bonferroni step-down procedure per disease and metric family.
+    Adds a 'passes_hb' boolean column to the dataframe.
+    """
+    tests = tests_df.copy()
+    tests['passes_hb'] = False
+    
+    # We group by disease and metric. For each combination, we are comparing 
+    # m = 5 methods against the reference. This constitutes our "family" of tests.
+    for (disease, metric), group in tests.groupby(['disease', 'metric']):
+        # Sort by raw p-value ascending
+        sorted_group = group.sort_values('p_value')
+        m = len(sorted_group)
+        
+        for k, (idx, row) in enumerate(sorted_group.iterrows()):
+            # Holm-Bonferroni threshold: alpha / (m - k)
+            # where k is 0-indexed here, so it effectively maps to (m + 1 - (k+1))
+            threshold = alpha / (m - k)
+            
+            if row['p_value'] <= threshold:
+                tests.loc[idx, 'passes_hb'] = True
+            else:
+                # Step-down procedure dictates that once one fails to reject, 
+                # all subsequent hypotheses are also retained.
+                break 
+                
+    return tests
 
 # ─────────────────────────────────────────────
 # PRINTED TABLE
@@ -163,8 +190,9 @@ def save_full_table_latex(tests: pd.DataFrame, distributions: dict, out_path: st
     """
     Generates a publication-ready LaTeX table matching the strict multirow format.
     Combines point estimates, CIs, and significance superscripts into single cells.
+    Colors the significance markers red if they pass Holm-Bonferroni correction.
     """
-    # Mapping for  LaTeX method names
+    # Mapping for LaTeX method names
     latex_method_names = {
         'h_total':     r'$H_{\text{Total}}$ (Global)',
         'margin':      r'Margin (Global)',
@@ -206,10 +234,10 @@ def save_full_table_latex(tests: pd.DataFrame, distributions: dict, out_path: st
         dist_df = distributions.get(disease)
         
         for j, method in enumerate(METHODS_ORDER):
-            # Dataset Column (only populated on the first row of the disease block)
+            # Dataset Column
             col_dataset = multirow_def if j == 0 else " "
             
-            # Method Column (bold if it's the reference)
+            # Method Column
             meth_name = latex_method_names.get(method, method)
             col_method = f"\\textbf{{{meth_name}}}" if method == REFERENCE else meth_name
             
@@ -229,7 +257,7 @@ def save_full_table_latex(tests: pd.DataFrame, distributions: dict, out_path: st
                 else:
                     est_str = "--"
                     
-                # 2. Get Significance Superscript (Skip for Global AUGRC and Reference Method)
+                # 2. Get Significance Superscript
                 sup_str = ""
                 if metric != 'global_augrc' and method != REFERENCE and est_str != "--":
                     sub = tests[
@@ -241,8 +269,14 @@ def save_full_table_latex(tests: pd.DataFrame, distributions: dict, out_path: st
                         row = sub.iloc[0]
                         direction = r"\uparrow" if row['mean_difference'] > 0 else r"\downarrow"
                         p_marker = sig_marker(row['p_value'])
+                        
                         if p_marker == 'ns': 
                             p_marker = r"\text{ns}"
+                        else:
+                            # Apply RED color if it passed Holm-Bonferroni
+                            if row.get('passes_hb', False):
+                                p_marker = f"\\textcolor{{red}}{{{p_marker}}}"
+                                
                         sup_str = f"$^{{{direction}{p_marker}}}$"
                 
                 # Combine Estimate, CI, and Superscript
@@ -254,16 +288,22 @@ def save_full_table_latex(tests: pd.DataFrame, distributions: dict, out_path: st
                     
                 row_cells.append(cell_str)
                 
-            # Join row with & and end with \\
             lines.append(" & ".join(row_cells) + r" \\")
             
-    # Close the table
+    # Close the table and add the Legend
     lines.append(r"\bottomrule")
     lines.append(r"\end{tabular}")
     lines.append(r"}")
+    
+    # Legend detailing the Red text
+    lines.append(r"\vspace{1ex}")
+    lines.append(r"{\raggedright \footnotesize")
+    lines.append(r"Significance vs. Proposed ($H_\tau$ + CCR): *** $p<0.001$, ** $p<0.01$, * $p<0.05$, ns: not significant. \\")
+    lines.append(r"Arrows indicate if the baseline is structurally worse ($\uparrow$, higher risk) or better ($\downarrow$, lower risk). \\")
+    lines.append(r"Red markers ($\textcolor{red}{*}$) indicate that statistical significance is maintained after Holm-Bonferroni correction ($\alpha=0.05$). \par}")
+    
     lines.append(r"\end{table*}")
     
-    # Save to file
     with open(out_path, 'w', encoding='utf-8') as f:
         f.write("\n".join(lines))
         
@@ -323,9 +363,12 @@ if __name__ == '__main__':
     tests         = pd.read_csv(args.tests)
     distributions = load_distributions(args.distrib)
 
+    # NEW: Apply Holm-Bonferroni correction before generating tables
+    tests = apply_holm_bonferroni(tests, alpha=0.05)
+
     print("\n" + "═"*90)
     print("STATISTICAL SUMMARY TABLE")
     print("═"*90)
-    print_full_table(tests, distributions, metrics = available_metrics)
+    print_full_table(tests, distributions, metrics=available_metrics)
     save_full_table_latex(tests, distributions, out_path=os.path.join(args.out_dir, "statistical_summary.tex"))
 
