@@ -6,7 +6,7 @@ import pandas as pd
 from scipy.stats import wilcoxon
 
 from rejection_utils import (
-    DISEASES, METHODS, compute_signals, compute_ccaugrc, compute_global_augrc
+    DISEASES, METHODS, compute_common_support_areas, compute_signals, compute_ccaugrc, compute_global_augrc
 )
 
 warnings.filterwarnings('ignore')
@@ -38,13 +38,42 @@ N_BOOTSTRAP = 1000
 
 def compute_all_metrics(df: pd.DataFrame, tau: float) -> dict:
     df = compute_signals(df, tau)
+    
+    # 1. Temporarily store the full curve/support data for each method
+    raw_progressor = {}
+    raw_stable = {}
+    raw_global = {}
+    
+    for method in METHODS:
+        raw_progressor[method] = compute_ccaugrc(df, method, tau, 1)
+        raw_stable[method]     = compute_ccaugrc(df, method, tau, 0)
+        raw_global[method]     = compute_global_augrc(df, method, tau)
+        
+    # 2. Calculate the common-support areas across all methods for each metric
+    cs_progressor = compute_common_support_areas(raw_progressor)
+    cs_stable     = compute_common_support_areas(raw_stable)
+    cs_global     = compute_common_support_areas(raw_global)
+    
+    # 3. Assemble the final reporting dictionary
     records = {}
     for method in METHODS:
         records[method] = {
-            'ccaugrc_progressor': compute_ccaugrc(df, method, tau, 1),
-            'ccaugrc_stable':     compute_ccaugrc(df, method, tau, 0),
-            'global_augrc':       compute_global_augrc(df, method, tau),
+            # Original Method-Dependent Areas
+            'ccaugrc_progressor': raw_progressor[method]['area'],
+            'ccaugrc_stable':     raw_stable[method]['area'],
+            'global_augrc':       raw_global[method]['area'],
+            
+            # Report the support for each area
+            'support_progressor': raw_progressor[method]['support'],
+            'support_stable':     raw_stable[method]['support'],
+            'support_global':     raw_global[method]['support'],
+            
+            # Common-Support Areas
+            'cs_ccaugrc_progressor': cs_progressor.get(method, np.nan),
+            'cs_ccaugrc_stable':     cs_stable.get(method, np.nan),
+            'cs_global_augrc':       cs_global.get(method, np.nan),
         }
+        
     return records
 
 def approach2_bootstrap(summary_df: pd.DataFrame, tau: float, seed: int = 42) -> pd.DataFrame:
@@ -67,41 +96,58 @@ def approach2_bootstrap(summary_df: pd.DataFrame, tau: float, seed: int = 42) ->
     return pd.DataFrame(records)
 
 def compute_ci_and_tests(iter_df: pd.DataFrame, disease: str, reference: str = 'h_tau_ccr', alpha: float = 0.05) -> pd.DataFrame:
-    comparisons = [m for m in METHODS if m != reference]
+    # Safely handle METHODS whether it's a list or a dict
+    method_list = list(METHODS.keys()) if isinstance(METHODS, dict) else METHODS
+    comparisons = [m for m in method_list if m != reference]
+    
     records = []
-    metrics = ['ccaugrc_progressor', 'ccaugrc_stable', 'global_augrc']
+    # Added the common-support metrics to the statistical testing loop
+    metrics = [
+        'ccaugrc_progressor', 'ccaugrc_stable', 'global_augrc',
+        'cs_ccaugrc_progressor', 'cs_ccaugrc_stable', 'cs_global_augrc'
+    ]
 
     for metric in metrics:
+        if metric not in iter_df.columns:
+            continue
+            
         ref_series = iter_df[iter_df['method'] == reference].set_index('bootstrap_iter')[metric]
-        ref_vals = iter_df[iter_df['method'] == reference][metric].values
-        ref_ci_low, ref_ci_high = np.percentile(ref_vals, [100 * alpha / 2, 100 * (1 - alpha / 2)])
+        ref_vals = ref_series.dropna().values
+        
+        if len(ref_vals) == 0: continue
+        
+        # FIX 2: Use nanpercentile to ignore any NaNs from the common-support calculations
+        ref_ci_low, ref_ci_high = np.nanpercentile(ref_vals, [100 * alpha / 2, 100 * (1 - alpha / 2)])
 
         for method in comparisons:
             comp_series = iter_df[iter_df['method'] == method].set_index('bootstrap_iter')[metric]
-            common = ref_series.index.intersection(comp_series.index)
+            common = ref_series.dropna().index.intersection(comp_series.dropna().index)
+
+            if len(common) == 0: continue
 
             ref_al = ref_series.loc[common].values
             comp_al = comp_series.loc[common].values
             diff = comp_al - ref_al  # positive = comparison worse
 
-            comp_ci_low, comp_ci_high = np.percentile(comp_al, [100 * alpha / 2, 100 * (1 - alpha / 2)])
-            diff_ci_low, diff_ci_high = np.percentile(diff, [100 * alpha / 2, 100 * (1 - alpha / 2)])
+            comp_ci_low, comp_ci_high = np.nanpercentile(comp_al, [100 * alpha / 2, 100 * (1 - alpha / 2)])
+            diff_ci_low, diff_ci_high = np.nanpercentile(diff, [100 * alpha / 2, 100 * (1 - alpha / 2)])
 
             prop_same_sign = (diff > 0).mean() if diff.mean() > 0 else (diff < 0).mean()
             pval = 2 * min(prop_same_sign, 1 - prop_same_sign)
 
             records.append({
                 'disease': disease, 'metric': metric, 'reference_method': reference,
-                'reference_mean': ref_al.mean(), 'reference_ci_low': ref_ci_low, 'reference_ci_high': ref_ci_high,
-                'comparison_method': method, 'comparison_mean': comp_al.mean(),
+                'reference_mean': np.nanmean(ref_al), 'reference_ci_low': ref_ci_low, 'reference_ci_high': ref_ci_high,
+                'comparison_method': method, 'comparison_mean': np.nanmean(comp_al),
                 'comparison_ci_low': comp_ci_low, 'comparison_ci_high': comp_ci_high,
-                'mean_difference': diff.mean(), 'diff_ci_low': diff_ci_low, 'diff_ci_high': diff_ci_high,
+                'mean_difference': np.nanmean(diff), 'diff_ci_low': diff_ci_low, 'diff_ci_high': diff_ci_high,
                 'ci_excludes_zero': not (diff_ci_low <= 0 <= diff_ci_high),
                 'p_value': pval, 'test_name': 'Bootstrap sign test',
-                'cohens_d': diff.mean() / (diff.std() + 1e-10), 'n_samples': len(common),
+                'cohens_d': np.nanmean(diff) / (np.nanstd(diff) + 1e-10), 'n_samples': len(common),
             })
 
     return pd.DataFrame(records)
+
 
 def run_disease(disease: str, summary_path: str, out_dir: str):
     if not summary_path or not os.path.exists(summary_path): return None
@@ -117,10 +163,21 @@ def run_disease(disease: str, summary_path: str, out_dir: str):
     tests = compute_ci_and_tests(iter_df, disease)
     tests.to_csv(os.path.join(out_dir, f'{disease.lower()}_statistical_tests.csv'), index=False)
     
-    print("\n  Point estimates with 95% CI  (Progressor ccAUGRC):")
-    for method, label in METHODS.items():
-        vals = iter_df[iter_df['method'] == method]['ccaugrc_progressor'].values
-        print(f"  {label:<32} {vals.mean():.4f}  [{np.percentile(vals, 2.5):.4f}, {np.percentile(vals, 97.5):.4f}]")
+    print("\n  Point estimates with 95% CI:")
+    
+    # Safe iteration over METHODS
+    method_items = METHODS.items() if isinstance(METHODS, dict) else {m: m for m in METHODS}.items()
+    
+    for method, label in method_items:
+        # Print Original
+        vals = iter_df[iter_df['method'] == method]['ccaugrc_progressor'].dropna().values
+        if len(vals) > 0:
+            print(f"  {label:<32} (Original)       {np.mean(vals):.4f}  [{np.percentile(vals, 2.5):.4f}, {np.percentile(vals, 97.5):.4f}]")
+            
+        # Print Common Support for Reviewer
+        cs_vals = iter_df[iter_df['method'] == method]['cs_ccaugrc_progressor'].dropna().values
+        if len(cs_vals) > 0:
+            print(f"  {label:<32} (Common Support) {np.mean(cs_vals):.4f}  [{np.percentile(cs_vals, 2.5):.4f}, {np.percentile(cs_vals, 97.5):.4f}]")
 
     return tests
 
