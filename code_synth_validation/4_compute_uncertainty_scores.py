@@ -8,13 +8,14 @@ for every patient × condition using four methods:
     2. Margin    — absolute decision margin |mu - tau|
     3. H_tau     — piecewise-rescaled entropy (patient-level fix)
     4. H_tau_CCRC — H_tau with class-conditioned ordinal ranking applied
+    5. Margin_CCRC — Margin with class-conditioned ordinal ranking applied
 
 Output
 ------
     all_conditions_uncertainty.csv
     Columns: idx, mu, sigma, label, tau, d, n,
              h_total, margin, h_tau, ccrc_rank_within_class,
-             predicted_class, h_tau_ccrc_score
+             predicted_class, h_tau_ccrc_score, margin_ccrc_score
 
 Usage
 -----
@@ -71,7 +72,7 @@ def h_tau(p: np.ndarray, tau: float) -> np.ndarray:
     return shannon_entropy(p_tilde)
 
 
-def apply_ccrc(df_condition: pd.DataFrame, tau: float) -> pd.DataFrame:
+def apply_ccrc(df_condition: pd.DataFrame, tau: float, metric='h_tau',) -> pd.DataFrame:
     """
     Class-Conditioned Rejection Curve ranking.
     
@@ -86,12 +87,22 @@ def apply_ccrc(df_condition: pd.DataFrame, tau: float) -> pd.DataFrame:
     
     The CCRC score is the within-class percentile — used as the uncertainty
     signal for rejection decisions instead of the raw H_tau value.
+
+
+    Parameters
+    ----------
+    df_condition : pd.DataFrame
+        DataFrame containing patient-condition rows for a single condition.
+    tau : float
+        Decision threshold for predicted class assignment.
+    metric : str, optional
+        The uncertainty metric to rank by (default is 'h_tau').
     """
     df = df_condition.copy()
     df['predicted_class'] = (df['mu'] >= tau).astype(int)
 
     # Within-class percentile rank of H_tau (higher = more uncertain)
-    df['ccrc_rank'] = df.groupby('predicted_class')['h_tau'].rank(
+    df[f'{metric}_ccrc'] = df.groupby('predicted_class')[metric].rank(
         method='average', pct=True
     )
 
@@ -130,14 +141,18 @@ def compute_all_scores(
         g['h_tau']   = h_tau(g['mu'].values, tau)
 
         # ── CCRC: within-class percentile rank of H_tau ──
-        g = apply_ccrc(g, tau)
+        g = apply_ccrc(g, tau, metric='h_tau')
+
+        # ── CCRC: within-class percentile rank of Margin ──
+        g = apply_ccrc(g, tau, metric='margin')
+
+        # ── CCRC: within-class percentile rank of H_total ──
+        g = apply_ccrc(g, tau, metric='h_total')
 
         all_results.append(g)
 
     result_df = pd.concat(all_results, ignore_index=True)
 
-    # Rename for clarity in downstream scripts
-    result_df = result_df.rename(columns={'ccrc_rank': 'h_tau_ccrc'})
 
     result_df.to_csv(output_path, index=False)
     print(f"\nSaved: {output_path}")
