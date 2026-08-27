@@ -46,6 +46,8 @@ METHODS = {
     'margin':    'Margin (Global)',
     'h_tau':     'H_tau (Global)',
     'h_tau_ccrc': 'H_tau + CCRC (Proposed)',
+    'margin_ccrc': 'Margin + CCRC',
+    'h_total_ccrc': 'H_Total + CCRC',
 }
 
 # For margin: low value = high uncertainty (invert for ranking)
@@ -344,8 +346,8 @@ def compute_all_rejection_metrics(
     curves_df  = pd.DataFrame(curve_records)
     scalars_df = pd.DataFrame(scalar_records)
 
-    curves_path  = f"{out_dir}/rejection_curves.csv"
-    scalars_path = f"{out_dir}/scalar_summaries.csv"
+    curves_path  = f"{out_dir}/rejection_curves_new.csv"
+    scalars_path = f"{out_dir}/scalar_summaries_new.csv"
 
     curves_df.to_csv(curves_path,  index=False)
     scalars_df.to_csv(scalars_path, index=False)
