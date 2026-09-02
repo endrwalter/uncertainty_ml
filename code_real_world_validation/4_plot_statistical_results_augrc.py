@@ -171,9 +171,10 @@ def print_full_table(tests: pd.DataFrame, distributions: dict, metrics = [
                 else:
                     sig_str = '[reference]'
 
-                if metric == 'global_augrc':
+
+                if 'global_augrc' in metric:
                     row_parts.append(f"{est_str:>30}")
-                elif metric == 'ccaugrc_progressor':
+                elif 'progressor' in metric:
                     row_parts.append(f"{est_str:>30} {sig_str:>12}")
                 else:
                     row_parts.append(f"{est_str:>26} {sig_str:>12}")
@@ -186,7 +187,7 @@ def print_full_table(tests: pd.DataFrame, distributions: dict, metrics = [
         print(f"  ↓better = comparison method has lower (better) ccAUGRC than reference")
 
 
-def save_full_table_latex(tests: pd.DataFrame, distributions: dict, out_path: str):
+def save_full_table_latex(tests: pd.DataFrame, distributions: dict, out_path: str, metrics: list):
     """
     Generates a publication-ready LaTeX table matching the strict multirow format.
     Combines point estimates, CIs, and significance superscripts into single cells.
@@ -202,12 +203,6 @@ def save_full_table_latex(tests: pd.DataFrame, distributions: dict, out_path: st
         'margin_ccr':  r'Margin + CCR',
         'h_tau_ccr':   r'$H_\tau$ + CCR'
     }
-
-    metrics = [
-        ('ccaugrc_progressor', 'Progressor ccAUGRC'),
-        ('ccaugrc_stable',     'Stable ccAUGRC'),
-        ('global_augrc',       'Global AUGRC'),
-    ]
         
     lines = []
     lines.append(r"\begin{table*}[htbp]")
@@ -257,9 +252,9 @@ def save_full_table_latex(tests: pd.DataFrame, distributions: dict, out_path: st
                 else:
                     est_str = "--"
                     
-                # 2. Get Significance Superscript
+                # 2. Get Significance Superscript (CORRETTO IL CONTROLLO 'global_augrc')
                 sup_str = ""
-                if metric != 'global_augrc' and method != REFERENCE and est_str != "--":
+                if 'global_augrc' not in metric and method != REFERENCE and est_str != "--":
                     sub = tests[
                         (tests['disease'] == disease) &
                         (tests['metric'] == metric) &
@@ -361,14 +356,27 @@ if __name__ == '__main__':
 
     print("Loading data...")
     tests         = pd.read_csv(args.tests)
+    tests_orig = tests[tests['comparison_method'].isin(METHODS_ORDER)]
+    tests_cs = tests[tests['comparison_method'].isin(METHODS_ORDER) & tests['metric'].str.startswith('cs_')]
+    tests = pd.concat([tests_orig, tests_cs], ignore_index=True)
+
     distributions = load_distributions(args.distrib)
 
-    # NEW: Apply Holm-Bonferroni correction before generating tables
-    tests = apply_holm_bonferroni(tests, alpha=0.05)
+    # Apply Holm-Bonferroni correction before generating tables
+    corrected_tests_orig = apply_holm_bonferroni(tests_orig, alpha=0.05)
+    corrected_tests_cs = apply_holm_bonferroni(tests_cs, alpha=0.05)
 
     print("\n" + "═"*90)
     print("STATISTICAL SUMMARY TABLE")
     print("═"*90)
-    print_full_table(tests, distributions, metrics=available_metrics)
-    save_full_table_latex(tests, distributions, out_path=os.path.join(args.out_dir, "statistical_summary.tex"))
+    print("Note: Significance levels are adjusted for multiple comparisons using the Holm-Bonferroni method.")
+    print_full_table(corrected_tests_orig, distributions, metrics=available_metrics)
+    save_full_table_latex(corrected_tests_orig, distributions, out_path=os.path.join(args.out_dir, "statistical_summary.tex"), metrics=available_metrics)
+
+    print("\n" + "═"*90)
+    print("STATISTICAL SUMMARY TABLE (Common Support)")
+    print("═"*90)
+    print("Note: Significance levels are adjusted for multiple comparisons using the Holm-Bonferroni method.")
+    print_full_table(corrected_tests_cs, distributions, metrics=available_metrics_cs)
+    save_full_table_latex(corrected_tests_cs, distributions, out_path=os.path.join(args.out_dir, "statistical_summary_cs.tex"), metrics=available_metrics_cs)
 
