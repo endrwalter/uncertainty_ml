@@ -1,11 +1,3 @@
-"""
-Fig 6 : Real-world — Rejection Curves MS / PD / AD
-Fig 7 : Real-world — Asymmetry Test
-
-python 5_plot_results.py \
-    --real_dir  ../results/real_world_results/ \
-    --out_dir   ../figures/paper/
-"""
 import argparse
 import os
 import warnings
@@ -17,11 +9,15 @@ import matplotlib.gridspec as gridspec
 from matplotlib.lines import Line2D
 from matplotlib.colors import LinearSegmentedColormap
 import seaborn as sns
-from scipy.stats import gaussian_kde
+from scipy.stats import gaussian_kde, wilcoxon # <-- Added wilcoxon
 
 warnings.filterwarnings('ignore')
 
-
+'''
+python 5_plot_resultsv2.py \
+    --real_dir  ../results/real_world_results/ \
+    --out_dir   ../figures/paper/
+'''
 # ─────────────────────────────────────────────
 # GLOBAL STYLE
 # ─────────────────────────────────────────────
@@ -68,126 +64,54 @@ def set_style():
     })
 
 
-
-
-# ─────────────────────────────────────────────
-# FIG 6 — REAL-WORLD REJECTION CURVES
-# ─────────────────────────────────────────────
-
-def fig6_real_rejection_curves(real_data: dict, out_dir: str):
-    """
-    3 rows (MS, PD, AD) × 3 cols (sensitivity, specificity, AUPRC).
-    Optimized for print-scale readability.
-    """
-    set_style()
-    
-    diseases = [
-        ('MS', 'MS Cohort\n(τ=0.13)'),
-        ('PD', 'PD Cohort\n(τ=0.39)'),
-        ('AD', 'AD Cohort\n(τ=0.54)'),
-    ]
-    
-    metrics = [
-        ('sensitivity', 'Sensitivity'),
-        ('specificity', 'Specificity'),
-        ('auprc',       'AUPRC'),
-    ]
-    
-    methods_to_show = ['h_total', 'margin', 'h_tau', 'h_tau_ccr']
-
-    style_map = {
-        'h_tau_ccr': {'ls': '-',  'lw': 2.5, 'alpha': 1.0, 'zorder': 4, 'label': 'H-tau + CCR (Proposed)'},
-        'h_tau':     {'ls': '--', 'lw': 1.5, 'alpha': 0.8, 'zorder': 3, 'label': 'H-tau (Global)'},
-        'margin':    {'ls': '-.', 'lw': 1.5, 'alpha': 0.8, 'zorder': 2, 'label': 'Margin (Global)'},
-        'h_total':   {'ls': ':',  'lw': 1.5, 'alpha': 0.8, 'zorder': 1, 'label': 'H-Total (Global)'}
-    }
-
-    # Reduced figsize to simulate actual print dimensions. 
-    # This forces matplotlib to render fonts and lines proportionally larger.
-    fig, axes = plt.subplots(3, 3, figsize=(10, 9))
-    letters = "ABCDEFGHI"
-
-    for row, (disease_key, disease_label) in enumerate(diseases):
-        df = real_data.get(disease_key)
-        if df is None:
-            for col in range(3):
-                axes[row][col].text(0.5, 0.5, 'Data Missing', ha='center', va='center')
-                axes[row][col].set_title(letters[row * 3 + col], loc='left', fontsize=12, fontweight='bold')
-            continue
-
-        for col, (metric, metric_name) in enumerate(metrics):
-            ax = axes[row][col]
-            plot_idx = row * 3 + col
-
-            for method in methods_to_show:
-                sub = df[df['method'] == method].sort_values('rejection_rate')
-                style = style_map[method]
-                
-                ax.plot(
-                    sub['rejection_rate'], sub[metric],
-                    color=PALETTE[method], label=style['label'],
-                    linewidth=style['lw'], linestyle=style['ls'], 
-                    alpha=style['alpha'], zorder=style['zorder']
-                )
-
-
-            ax.set_ylim(0, 1.05)
-            ax.set_xlim(0, 0.80)
-            
-            # Adjust tick label size for print
-            ax.tick_params(axis='both', which='major', labelsize=9)
-
-            if col == 0:
-                ax.set_ylabel(disease_label, fontsize=11, fontweight='bold', labelpad=10)
-            else:
-                ax.set_ylabel('')
-
-            if row == 2:
-                ax.set_xlabel('Rejection Rate', fontsize=10)
-            else:
-                ax.set_xlabel('')
-
-            if row == 0:
-                ax.set_title(metric_name, loc='center', fontsize=12, fontweight='bold', pad=8)
-
-            ax.set_title(letters[plot_idx], loc='left', fontsize=12, fontweight='bold', pad=8)
-
-    # Tightened padding so the subplots feel cohesive and don't waste canvas space
-    plt.tight_layout(rect=[0, 0.08, 1, 1], h_pad=1.5, w_pad=1.5)
-
-    handles, labels = axes[0][0].get_legend_handles_labels()
-    
-    if handles:
-        by_label = dict(zip(labels, handles))
-        ordered_handles = [by_label[style_map[m]['label']] for m in methods_to_show if style_map[m]['label'] in by_label]
-        ordered_labels = [style_map[m]['label'] for m in methods_to_show if style_map[m]['label'] in by_label]
-        
-        # Switched to 2 columns if the figure is narrower, or 4 if it fits. 
-        # Using 2 columns stacked ensures it doesn't spill off the edges on a 10-inch width.
-        fig.legend(ordered_handles, ordered_labels,
-                   loc='lower center', 
-                   bbox_to_anchor=(0.5, 0.01),
-                   ncol=2, 
-                   fontsize=10, 
-                   frameon=False)
-
-    path = os.path.join(out_dir, 'fig6_real_rejection_curves.pdf')
-    plt.savefig(path)
-    plt.close()
-    print(f"Saved: {path}")
-
-
 # ─────────────────────────────────────────────
 # FIG 7 — REAL-WORLD ASYMMETRY TEST
 # ─────────────────────────────────────────────
 
+def process_to_deciles(df):
+    """
+    Dynamically converts distance-binned data into aligned class percentiles.
+    Processes classes independently to safely handle NaNs and missing tail data.
+    """
+    # --- Above tau (Minority / Progressor) ---
+    df_above = df[['distance', 'n_above', 'variance_above_tau']].dropna()
+    df_above = df_above[df_above['n_above'] > 0].sort_values('distance')
+    
+    pct_above = (df_above['n_above'].cumsum() / df_above['n_above'].sum()) * 100
+    # Prepend 0 to ensure interpolation smoothly covers the first decile
+    xp_above = np.concatenate([[0], pct_above.values])
+    fp_above = np.concatenate([[df_above['variance_above_tau'].iloc[0]], df_above['variance_above_tau'].values])
+    
+    # --- Below tau (Majority / Stable) ---
+    df_below = df[['distance', 'n_below', 'variance_below_tau']].dropna()
+    df_below = df_below[df_below['n_below'] > 0].sort_values('distance')
+    
+    pct_below = (df_below['n_below'].cumsum() / df_below['n_below'].sum()) * 100
+    xp_below = np.concatenate([[0], pct_below.values])
+    fp_below = np.concatenate([[df_below['variance_below_tau'].iloc[0]], df_below['variance_below_tau'].values])
+    
+    # Standardize to deciles (10%, 20%, ... 100%)
+    deciles = np.arange(10, 101, 10)
+    
+    # Interpolate variances at the exact decile marks
+    var_above_interp = np.interp(deciles, xp_above, fp_above)
+    var_below_interp = np.interp(deciles, xp_below, fp_below)
+    
+    # Calculate average sample size per decile bin
+    n_above_per_decile = df_above['n_above'].sum() / 10
+    n_below_per_decile = df_below['n_below'].sum() / 10
+    
+    return deciles, var_above_interp, var_below_interp, n_above_per_decile, n_below_per_decile
+
+
 def fig7_asymmetry_test(asymmetry_data: dict, out_dir: str):
     """
-    Print-optimized 3 panels (MS, PD, AD): ensemble variance vs distance from boundary.
+    Print-optimized 3 panels (MS, PD, AD): ensemble variance vs distance percentiles.
+    Uses significance stars instead of text boxes for a cleaner layout.
     """
     set_style()
     
-    # Scaled down to 10x4 inches for a clean, single-row print layout
+    # Restored to the more compact 10x4 layout
     fig, axes = plt.subplots(1, 3, figsize=(10, 4))
 
     diseases = [
@@ -206,35 +130,58 @@ def fig7_asymmetry_test(asymmetry_data: dict, out_dir: str):
             ax.set_title(full_title, loc='left', fontsize=12, fontweight='bold', pad=8)
             continue
 
-        ax.plot(df['distance'], df['variance_above_tau'],
+        # 1. Transform data dynamically to deciles
+        deciles, v_above, v_below, n_above, n_below = process_to_deciles(df)
+
+        # 2. Plotting
+        ax.plot(deciles, v_above,
                 color='#C0392B', marker='o', lw=1.8, ms=4,
                 label='Progressor class (above τ)')
-        ax.plot(df['distance'], df['variance_below_tau'],
+        ax.plot(deciles, v_below,
                 color='#2980B9', marker='o', lw=1.8, ms=4,
                 label='Stable class (below τ)')
 
         ax.fill_between(
-            df['distance'],
-            df['variance_above_tau'],
-            df['variance_below_tau'],
+            deciles,
+            v_above,
+            v_below,
             alpha=0.12, color='#C0392B',
             label='Uncertainty asymmetry gap'
         )
 
-        ax.set_xlabel('Distance from boundary |p − τ|', fontsize=10)
+        # 3. Statistical Testing (Stars only)
+        try:
+            stat, p_val = wilcoxon(v_above, v_below)
+            
+            if p_val < 0.001:
+                sig_text = "***"
+            elif p_val < 0.01:
+                sig_text = "**"
+            elif p_val < 0.05:
+                sig_text = "*"
+            else:
+                sig_text = "ns"
+            
+            # Place the star(s) cleanly in the top right corner of the plot
+            ax.text(0.95, 0.95, sig_text, transform=ax.transAxes, 
+                    fontsize=12, fontweight='bold', ha='right', va='top')
+        except ValueError:
+            pass 
+
+        # 4. Formatting
+        ax.set_xlabel('Cumulative class proportion (%)', fontsize=10)
+        ax.set_xlim(0, 105)
         ax.tick_params(labelsize=9)
         ax.set_title(full_title, loc='left', fontsize=12, fontweight='bold', pad=8)
         
-        # Only show the Y-axis label on the far-left plot to de-clutter
         if col == 0:
-            ax.set_ylabel('Mean ensemble variance', fontsize=10)
+            ax.set_ylabel('Mean ensemble variance (proxy)', fontsize=10)
 
-    # Use 'rect' to reserve the bottom 15% of the figure for the global legend
+    # Tight layout reserving bottom space for legend
     plt.tight_layout(rect=[0, 0.12, 1, 1], w_pad=1.5)
 
-    # ── Global single-line legend at the bottom ──
+    # Global single-line legend at the bottom
     handles, labels = axes[0].get_legend_handles_labels()
-    
     if handles:
         by_label = dict(zip(labels, handles))
         fig.legend(by_label.values(), by_label.keys(),
@@ -244,7 +191,7 @@ def fig7_asymmetry_test(asymmetry_data: dict, out_dir: str):
                    fontsize=10, 
                    frameon=False)
 
-    path = os.path.join(out_dir, 'fig7_asymmetry_test.pdf')
+    path = os.path.join(out_dir, 'fig7_asymmetry_test_stat_val.pdf')
     plt.savefig(path)
     plt.close()
     print(f"Saved: {path}")
@@ -266,12 +213,9 @@ def main(real_dir: str, out_dir: str):
         else:
             print(f"  [SKIP] {disease}: {fpath} not found")
 
-    if real_data:
-        print("Fig 6 — Real-World Rejection Curves...")
-        fig6_real_rejection_curves(real_data, out_dir)
 
     # Asymmetry test data
-    # Expected: one CSV per disease with [distance, variance_above_tau, variance_below_tau]
+    # Expected: one CSV per disease with [distance, variance_above_tau, variance_below_tau, n_above, n_below]
     asym_data = {}
     for disease in ['MS', 'PD', 'AD']:
         fpath = os.path.join(real_dir, f'{disease.lower()}_asymmetry.csv')
