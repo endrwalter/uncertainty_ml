@@ -1,5 +1,5 @@
 """
-plot_statistical_results.py
+print_statistical_results.py
 =============================================================
 Loads all_statistical_tests.csv and produces:
 
@@ -9,7 +9,7 @@ Loads all_statistical_tests.csv and produces:
 
 Usage
 -----
-    python 4_plot_statistical_results_augrc.py \
+    python 4_print_statistical_results_augrc.py \
         --tests   ../results/statistical_tests/all_statistical_tests.csv \
         --distrib ../results/statistical_tests/ \
         --out_dir ../figures/paper/
@@ -100,32 +100,7 @@ def apply_holm_bonferroni_column(tests_df: pd.DataFrame, alpha: float = 0.05) ->
                 
     return tests
 
-def apply_holm_bonferroni(tests_df: pd.DataFrame, alpha: float = 0.05) -> pd.DataFrame:
-    """
-    Applies the Holm-Bonferroni step-down procedure across ALL cells in the table simultaneously.
-    Treats every row in the dataframe as part of a single, global family of tests.
-    Adds a 'passes_hb' boolean column to the dataframe.
-    """
-    tests = tests_df.copy()
-    tests['passes_hb'] = False
-    
-    # Sort the entire dataframe by raw p-value ascending
-    sorted_tests = tests.sort_values('p_value')
-    m = len(sorted_tests)
-    
-    for k, (idx, row) in enumerate(sorted_tests.iterrows()):
-        # Holm-Bonferroni threshold: alpha / (m - k)
-        # where k is 0-indexed here, so it effectively maps to alpha / (m + 1 - (k + 1))
-        threshold = alpha / (m - k)
-        
-        if row['p_value'] <= threshold:
-            tests.loc[idx, 'passes_hb'] = True
-        else:
-            # Step-down procedure dictates that once one fails to reject, 
-            # all subsequent hypotheses with larger p-values are also retained.
-            break 
-            
-    return tests
+
 
 
 

@@ -14,7 +14,7 @@ from scipy.stats import gaussian_kde, wilcoxon # <-- Added wilcoxon
 warnings.filterwarnings('ignore')
 
 '''
-python 5_plot_resultsv2.py \
+python 5_plot_results_asymmetry_test.py \
     --real_dir  ../results/real_world_results/ \
     --out_dir   ../figures/paper/
 '''
