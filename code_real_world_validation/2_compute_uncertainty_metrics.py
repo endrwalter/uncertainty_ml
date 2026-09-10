@@ -24,7 +24,7 @@ Input per disease
 patient_mean_probs_summary.csv produced by build_ensemble_csv:
     idx, mu, sigma, label, n_predictions, all_probs
 
-Output per disease (ready for paper_figures.py)
+Output per disease 
 -----------------------------------------------
     <out_dir>/
         ms_rejection_curves.csv
@@ -36,7 +36,6 @@ Output per disease (ready for paper_figures.py)
         ms_asymmetry.csv
         pd_asymmetry.csv
         ad_asymmetry.csv
-        ccaugrc_real_world.csv          ← Fig 8 input
 
 Usage
 -----
@@ -85,7 +84,7 @@ def compute_rejection_metrics(df: pd.DataFrame, tau: float, disease: str):
         sensitivities, specificities, auprcs, min_coverages = [], [], [], []
 
         for rr in REJECTION_RATES:
-            retained = reject_patients(df, method_col, rr, tau)
+            retained = reject_patients(df, method=method_col, rr=rr, tau=tau)
             m = compute_metrics(retained, tau)
 
             n_min_kept = (retained['label'] == 1).sum() if len(retained) > 0 else 0
@@ -113,9 +112,15 @@ def compute_rejection_metrics(df: pd.DataFrame, tau: float, disease: str):
         valid = [(r, s) for r, s, m in zip(REJECTION_RATES, sensitivities, mask_50) if m and not np.isnan(s)]
         slope = linregress(*zip(*valid))[0] if len(valid) > 2 else np.nan
 
-        ccaugrc_prog = compute_ccaugrc(df, method_col, tau, 1)
-        ccaugrc_stable = compute_ccaugrc(df, method_col, tau, 0)
-        global_augrc = compute_global_augrc(df, method_col, tau)
+        # Extract the exact float value using the 'area' key
+        ccaugrc_prog_dict = compute_ccaugrc(df, method_col, tau, 1)
+        ccaugrc_prog = ccaugrc_prog_dict['area'] if isinstance(ccaugrc_prog_dict, dict) else ccaugrc_prog_dict
+        
+        ccaugrc_stable_dict = compute_ccaugrc(df, method_col, tau, 0)
+        ccaugrc_stable = ccaugrc_stable_dict['area'] if isinstance(ccaugrc_stable_dict, dict) else ccaugrc_stable_dict
+        
+        global_augrc_dict = compute_global_augrc(df, method_col, tau)
+        global_augrc = global_augrc_dict['area'] if isinstance(global_augrc_dict, dict) else global_augrc_dict
 
         scalar_records.append({
             'disease': disease, 'tau': tau, 'method': method_col, 'method_label': method_label,
@@ -124,7 +129,9 @@ def compute_rejection_metrics(df: pd.DataFrame, tau: float, disease: str):
             'sensitivity_stability': slope,
             f'minority_coverage_at_{int(FIXED_REJECTION*100)}pct': mincov_30,
             'class_separation': sens_30 / spec_30 if spec_30 and spec_30 > 0 else np.nan,
-            'ccaugrc_progressor': ccaugrc_prog, 'ccaugrc_stable': ccaugrc_stable, 'global_augrc': global_augrc,
+            'ccaugrc_progressor': ccaugrc_prog, 
+            'ccaugrc_stable': ccaugrc_stable, 
+            'global_augrc': global_augrc,
         })
         print(f"    {method_label:<30} sens@30%={sens_30:.3f} spec@30%={spec_30:.3f} stability={slope:.3f} prog_ccaugrc={ccaugrc_prog:.4f}")
 
@@ -150,11 +157,73 @@ def compute_asymmetry_test(df: pd.DataFrame, tau: float, disease: str) -> pd.Dat
         })
     return pd.DataFrame(records)
 
+def analyze_combined_rejection_dynamics(curves_df, df_raw, disease, method):
+    """
+    Computes rejection dynamics for BOTH the D0 (predicted stable) 
+    and D1 (predicted progressor) queues across all rejection rates.
+    """
+    N1 = (df_raw['label'] == 1).sum()
+    N0 = (df_raw['label'] == 0).sum()
+    
+    sub_df = curves_df[(curves_df['disease'] == disease) & (curves_df['method'] == method)]
+    if sub_df.empty:
+        return []
+        
+    base_row = sub_df[sub_df['rejection_rate'] == 0.0].iloc[0]
+    
+    # Initial D0 Queue Sizes (Predicted Stable)
+    initial_fns = (1.0 - base_row['sensitivity']) * base_row['minority_coverage'] * N1
+    initial_tns = base_row['specificity'] * base_row['majority_coverage'] * N0
+    
+    # Initial D1 Queue Sizes (Predicted Progressor)
+    initial_tps = base_row['sensitivity'] * base_row['minority_coverage'] * N1
+    initial_fps = (1.0 - base_row['specificity']) * base_row['majority_coverage'] * N0
+    
+    records = []
+    for _, row in sub_df.iterrows():
+        rr = row['rejection_rate']
+        
+        # Retained sizes
+        retained_fns = (1.0 - row['sensitivity']) * row['minority_coverage'] * N1
+        retained_tns = row['specificity'] * row['majority_coverage'] * N0
+        
+        retained_tps = row['sensitivity'] * row['minority_coverage'] * N1
+        retained_fps = (1.0 - row['specificity']) * row['majority_coverage'] * N0
+        
+        # Calculate D0 Rejections (FN vs TN)
+        rejected_fns = initial_fns - retained_fns
+        rejected_tns = initial_tns - retained_tns
+        fn_rej_pct = (rejected_fns / initial_fns) * 100 if initial_fns > 0 else 0
+        tn_rej_pct = (rejected_tns / initial_tns) * 100 if initial_tns > 0 else 0
+        
+        # Calculate D1 Rejections (FP vs TP)
+        rejected_tps = initial_tps - retained_tps
+        rejected_fps = initial_fps - retained_fps
+        tp_rej_pct = (rejected_tps / initial_tps) * 100 if initial_tps > 0 else 0
+        fp_rej_pct = (rejected_fps / initial_fps) * 100 if initial_fps > 0 else 0
+        
+        records.append({
+            'disease': disease,
+            'method': method,
+            'rejection_rate': rr,
+            'fn_rejection_pct': fn_rej_pct,
+            'tn_rejection_pct': tn_rej_pct,
+            'fp_rejection_pct': fp_rej_pct,
+            'tp_rejection_pct': tp_rej_pct
+        })
+        
+    return records
+
 def process_all_diseases(paths: dict, out_dir: str):
     os.makedirs(out_dir, exist_ok=True)
+    
     all_curves, all_scalars, all_asymmetry, ccaugrc_records = [], [], [], []
+    all_rej_dynamics = []
+    disease_specific_rej_dynamics = []
+    dyn_records = []  
 
     for disease, path in paths.items():
+        disease_specific_rej_dynamics = []
         if not path or not os.path.exists(path): continue
         tau = DISEASES[disease]['tau']
         print(f"\n{'═'*60}\nProcessing {disease}  (τ={tau})\n{'═'*60}")
@@ -166,19 +235,30 @@ def process_all_diseases(paths: dict, out_dir: str):
         curves, scalars = compute_rejection_metrics(df, tau, disease)
         asymmetry = compute_asymmetry_test(df, tau, disease)
 
+        for m_col in METHODS.keys():    
+            dyn_records = analyze_combined_rejection_dynamics(
+                curves_df=curves, df_raw=df, disease=disease, method=m_col
+            )
+            disease_specific_rej_dynamics.extend(dyn_records)
+
         curves.to_csv(f"{out_dir}/{disease.lower()}_rejection_curves.csv", index=False)
         scalars.to_csv(f"{out_dir}/{disease.lower()}_scalar_summaries.csv", index=False)
         asymmetry.to_csv(f"{out_dir}/{disease.lower()}_asymmetry.csv", index=False)
+        pd.DataFrame(disease_specific_rej_dynamics).to_csv(f"{out_dir}/{disease.lower()}_combined_dynamics.csv", index=False)
 
         all_curves.append(curves)
         all_scalars.append(scalars)
         all_asymmetry.append(asymmetry)
+        all_rej_dynamics.extend(disease_specific_rej_dynamics)
 
     if all_curves:
         pd.concat(all_curves).to_csv(f"{out_dir}/all_diseases_rejection_curves.csv", index=False)
         pd.concat(all_scalars).to_csv(f"{out_dir}/all_diseases_scalar_summaries.csv", index=False)
         pd.concat(all_asymmetry).to_csv(f"{out_dir}/all_diseases_asymmetry.csv", index=False)
+        # Convert the list of dicts to a DataFrame and save
+        pd.DataFrame(all_rej_dynamics).to_csv(f"{out_dir}/all_diseases_combined_dynamics.csv", index=False)
         print(f"\n{'═'*60}\nAll outputs saved to: {out_dir}\n{'═'*60}")
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -189,3 +269,6 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     process_all_diseases({'MS': args.ms_path, 'PD': args.pd_path, 'AD': args.ad_path}, args.out_dir)
+
+
+
