@@ -174,7 +174,7 @@ def run_disease(disease: str, summary_path: str, out_dir: str):
         if len(vals) > 0:
             print(f"  {label:<32} (Original)       {np.mean(vals):.4f}  [{np.percentile(vals, 2.5):.4f}, {np.percentile(vals, 97.5):.4f}]")
             
-        # Print Common Support for Reviewer
+        # Print Common Support
         cs_vals = iter_df[iter_df['method'] == method]['cs_ccaugrc_progressor'].dropna().values
         if len(cs_vals) > 0:
             print(f"  {label:<32} (Common Support) {np.mean(cs_vals):.4f}  [{np.percentile(cs_vals, 2.5):.4f}, {np.percentile(cs_vals, 97.5):.4f}]")
