@@ -7,7 +7,7 @@ from sklearn.metrics import average_precision_score
 # ─────────────────────────────────────────────────────────────
 # CONFIGURAZIONE INIZIALE
 # ─────────────────────────────────────────────────────────────
-METRIC = 'specificity'  # Options: 'auprc' or 'sensitivity' or 'specificity'
+METRIC = 'sensitivity'  # Options: 'auprc' or 'sensitivity' or 'specificity'
 INPUT_CSV = '../data/synthetic_results/all_conditions_uncertainty.csv'
 
 def set_style():
@@ -76,7 +76,7 @@ def plot_elkan_grid(df_all):
         for name, (c_fn, c_fp) in cost_scenarios.items():
             if name == 'Baseline':
                 tau_val = pi_val
-                title = f'$\\tau = \\pi = {pi_val:.2f}$ (Baseline)'
+                title = f'$\\tau = \\pi$ (Baseline)'
             else:
                 tau_val = c_fp / (c_fn + c_fp)
                 if c_fn > c_fp:

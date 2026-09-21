@@ -158,7 +158,6 @@ def compute_all_scores(
     print(f"\nSaved: {output_path}")
     print(f"Columns: {list(result_df.columns)}")
 
-    # Quick sanity check
 
     return result_df
 
