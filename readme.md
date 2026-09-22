@@ -68,19 +68,10 @@ The codebase is organized into modular directories handling the core classificat
 
 ### Real-World Validation
 * **`code_real_world_validation/`**: Implements the uncertainty quantification (UQ) and rejection protocol for cross-disease validation on real-world clinical datasets.
-  * `1_h_ensemble.py`: Handles the asynchronous aggregation of all machine learning models.
-  * `2_compute_uncertainy_metrics.py`: Computes total predictive uncertainty and class-conditioned rejection curves.
-  * `3_compute_stats.py`: Calculates bootstrap confidence intervals and performs statistical tests for ccAUGRC differences between methods.
-  * `4_plots`, `5_plots`, `6_plots`: Scripts to generate figures and visualizations for the real-world validation results.
-
+    * Please refer to the specific readme inside the folder for more information.
 ### Synthetic Validation
 * **`code_synth_validation/`**: Contains scripts for generating synthetic data and conducting controlled experiments to test method robustness.
-  * `1_synthetic_generator.py`: Generates synthetic datasets with configurable levels of class imbalance and noise.
-  * `2_generate_synthetic_configs.py`: Reads `synthetic_data/manifest.csv` to generate condition-specific `config.ini` files and a SLURM-compatible commands file (`synthetic_commands.txt`) indexed by `SLURM_ARRAY_TASK_ID`.
-  * `3_compute_stats.py`: Calculates bootstrap confidence intervals and statistical tests for ccAUGRC differences.
-  * `4_compute_uncertainty_scores.py`: Computes total predictive uncertainty and class-conditioned rejection curves for the synthetic datasets.
-  * `5_compute_rejection_metrics.py`: Calculates specialized rejection metrics.
-  * `7_paper_figures.py`: Generates figures for the manuscript based on synthetic validation results.
+    * Please refer to the specific readme inside the folder for more information.
 
 ### ADNI-Specific Pipelines
 * **`code_data_prep_adni/`**: Handles ADNI dataset preprocessing, including data cleaning, feature extraction, and formatting for model training.
@@ -136,6 +127,7 @@ python3 5_compute_rejection_metrics.py \
 ```
 
 ### Step 7 - Generate all figures
+* Generates core synthetic manuscript figures (Sensitivity Stability, Failure Map, Separability Interaction, and Appendix Rejection Curves):
 ```bash
 python3 6_visualize_phase_diagram.py \
     --scalars ../data/synthetic_results/scalar_summaries.csv \
@@ -143,12 +135,26 @@ python3 6_visualize_phase_diagram.py \
     --out_dir ../figures/synthetic
 ```
 
+### Step 8 - Structural Divergence Vaidation
+* Generates the synthetic asymmetry test validation figure evaluating uncertainty gaps across prevalence thresholds:
+```bash
+python3 8_structural_divergence_validation.py \
+    --in_dir  ../data/synthetic_results/ \
+    --out_dir ../figures/paper/
+```
+
+### Step 9 - Sensitivity Analysis & Density Ablation
+* Generates supplementary figures demonstrating structural vulnerabilities under varying cost matrices and distribution overlaps:
+```bash
+python3 1r_sensitivity_analysis.py
+```
+
 ---
 
 ## Usage Guide: Real-World Validation
 
 ### Step 1 - Generate Heterogeneous Ensembles
-Creates the aggregated ensemble predictions for Parkinson's Disease (PD), Multiple Sclerosis (MS), and Alzheimer's Disease (AD).
+* Creates the aggregated ensemble predictions for Parkinson's Disease (PD), Multiple Sclerosis (MS), and Alzheimer's Disease (AD).
 ```bash
 python3 1_h_ensemble.py ../results/classification/pd_dyskinesia/FutureDyskinesia
 python3 1_h_ensemble.py ../results/classification/ms_progression/progression_independent_from_relapses
@@ -156,7 +162,7 @@ python3 1_h_ensemble.py ../results/classification/mci_ad_conversion/label_bl_36m
 ```
 
 ### Step 2 - Compute Uncertainty Metrics
-Computes total predictive uncertainty and class-conditioned rejection curves.
+* Computes total predictive uncertainty and class-conditioned rejection curves.
 ```bash
 python3 2_compute_uncertainty_metrics.py \
     --ms_path  ../results/classification/ms_progression/progression_independent_from_relapses/aggregated/patient_mean_probs_progression_independent_from_relapses_ms_progression_model.csv \
@@ -166,7 +172,7 @@ python3 2_compute_uncertainty_metrics.py \
 ```
 
 ### Step 3 - Compute Statistics
-Computes bootstrap confidence intervals and statistical tests for ccAUGRC differences between methods. Bootstraps the full aggregated ensemble (deployment reality) and provides a 95% CI on the difference between methods.
+* Computes bootstrap confidence intervals, statistical tests, and stability metrics for ccAUGRC differences.
 ```bash
 python3 3_compute_stats.py \
     --ms_summary ../results/classification/ms_progression/progression_independent_from_relapses/aggregated/patient_mean_probs_progression_independent_from_relapses_ms_progression_model.csv \
@@ -175,23 +181,30 @@ python3 3_compute_stats.py \
     --out_dir ../results/statistical_tests/
 ```
 
-### Step 4 - Plot Statistical Tests (AUGRC)
-Generates a printed summary table for both Progressor and Stable ccAUGRC, alongside a grouped bar chart figure with 95% CI error bars and significance annotations for all three diseases.
+### Step 4 - Print Statistical Results
+* Prints statistical summary tables for AUGRC comparisons.
 ```bash
-python3 4_plot_statistical_results_augrc.py \
+python3 4_print_statistical_results_augrc.py \
     --tests   ../results/statistical_tests/all_statistical_tests.csv \
-    --distrib ../results/statistical_tests/ \
-    --out_dir ../figures/paper/
+    --out_dir ../results/statistical_tests/
 ```
 
-### Step 5 - Plot Results
-Generates the final manuscript figures:
-* **Fig 6**: Real-world — Rejection Curves MS / PD / AD
-* **Fig 7**: Real-world — Asymmetry Test
-* **Fig 8**: Real-world — ccAUGRC Decomposition Table
+### Step 5 - Generate Real-World Visualizations
+* Generates the final manuscript figures using dedicated plotting scripts:
 
 ```bash
-python3 5_plot_results.py \
+# Rejection dynamics
+python3 5_plot_rejection_dynamics.py \
+    --real_dir  ../results/real_world_results/ \
+    --out_dir   ../figures/paper/
+
+# Asymmetry test validation
+python3 5_plot_results_asymmetry_test.py \
+    --real_dir  ../results/real_world_results/ \
+    --out_dir   ../figures/paper/
+
+# Rejection curves
+python3 5_plot_results_rejection_curves.py \
     --real_dir  ../results/real_world_results/ \
     --out_dir   ../figures/paper/
 ```
