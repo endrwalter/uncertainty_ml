@@ -15,8 +15,8 @@ Fig 5 : Synthetic  — ccAUGRC Conceptual Summary (one condition)
 Usage
 -----
     python 7_paper_figures.py \
-        --scalars   ../data/synthetic_results/scalar_summaries.csv \
-        --curves    ../data/synthetic_results/rejection_curves.csv \
+        --scalars   ../data/synthetic_results/scalar_summaries_new.csv \
+        --curves    ../data/synthetic_results/rejection_curves_new.csv \
         --out_dir   ../figures/paper/
 """
 import matplotlib.patches as patches
@@ -128,7 +128,7 @@ def fig_sensitivity_stability(scalars: pd.DataFrame, out_dir: str, n: int = 1000
     #ax_main.axhspan(min_val * 1.05, -0.3, alpha=0.06, color='#C0392B')
 
 
-    ax_main.set_xlabel('Class Prior  τ', fontsize=10)
+    ax_main.set_xlabel('Class Prior  π', fontsize=10)
     ax_main.set_ylabel('Sensitivity Stability\n(slope over 0–50% rej.)', fontsize=10)
     ax_main.set_title('A', loc='left', fontsize=12, fontweight='bold', pad=8)
     ax_main.tick_params(labelsize=9)
@@ -143,7 +143,7 @@ def fig_sensitivity_stability(scalars: pd.DataFrame, out_dir: str, n: int = 1000
         ax_s.fill_between(sub.mean().index, sub.mean()-sub.std(), sub.mean()+sub.std(), 
                           color=PALETTE[method], alpha=0.15)
 
-    ax_s.set_xlabel('Class Prior  τ', fontsize=10)
+    ax_s.set_xlabel('Class Prior  π', fontsize=10)
     ax_s.set_ylabel('Sensitivity @ 30%', fontsize=10)
     ax_s.set_title('B', loc='left', fontsize=12, fontweight='bold', pad=8)
     ax_s.tick_params(labelsize=9)
@@ -158,7 +158,7 @@ def fig_sensitivity_stability(scalars: pd.DataFrame, out_dir: str, n: int = 1000
         ax_c.fill_between(sub.mean().index, sub.mean()-sub.std(), sub.mean()+sub.std(), 
                           color=PALETTE[method], alpha=0.15)
 
-    ax_c.set_xlabel('Class Prior  τ', fontsize=10)
+    ax_c.set_xlabel('Class Prior  π', fontsize=10)
     ax_c.set_ylabel('Specificity @ 30%', fontsize=10)
     ax_c.set_title('C', loc='left', fontsize=12, fontweight='bold', pad=8)
     ax_c.tick_params(labelsize=9)
@@ -283,7 +283,7 @@ def fig_failure_map(scalars: pd.DataFrame, out_dir: str, n: int = 1000):
                 annot=annot_htotal, fmt='', annot_kws={'size': 7}, **kw)
     axes[0].set_title('A', loc='left', fontsize=12, fontweight='bold', pad=10)
     axes[0].set_xlabel('Separability (d)', fontsize=10)
-    axes[0].set_ylabel('Class prior  τ', fontsize=10)
+    axes[0].set_ylabel('Class prior  π', fontsize=10)
     axes[0].collections[0].colorbar.set_label('Sensitivity', fontsize=9)
 
     # Panel B

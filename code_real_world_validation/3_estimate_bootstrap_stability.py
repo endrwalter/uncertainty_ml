@@ -9,7 +9,6 @@ python 3_estimate_bootstrap_stability.py \
     --pd_dist ../results/statistical_tests/pd_distributions.csv \
     --ad_dist ../results/statistical_tests/ad_distributions.csv \
     --out_csv ../results/statistical_tests/bootstrap_stability_table.csv
-
 '''
 
 

@@ -115,9 +115,9 @@ def fig7_asymmetry_test(asymmetry_data: dict, out_dir: str):
     fig, axes = plt.subplots(1, 3, figsize=(10, 4))
 
     diseases = [
-        ('A', 'MS', 'MS Cohort  (τ=0.13)', DISEASE_MARKERS['MS']['color']),
-        ('B', 'PD', 'PD Cohort  (τ=0.39)', DISEASE_MARKERS['PD']['color']),
-        ('C', 'AD', 'AD Cohort  (τ=0.54)', DISEASE_MARKERS['AD']['color']),
+        ('A', 'MS', 'MS Cohort  (π=0.13)', DISEASE_MARKERS['MS']['color']),
+        ('B', 'PD', 'PD Cohort  (π=0.39)', DISEASE_MARKERS['PD']['color']),
+        ('C', 'AD', 'AD Cohort  (π=0.54)', DISEASE_MARKERS['AD']['color']),
     ]
 
     for col, (ax, (letter, disease_key, label, color)) in enumerate(zip(axes, diseases)):

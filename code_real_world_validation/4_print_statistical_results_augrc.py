@@ -64,7 +64,7 @@ PALETTE = {
 
 DISEASES_ORDER = ['MS', 'PD', 'AD']
 DISEASE_LABELS = {
-    'MS': 'MS  (τ=0.11)',
+    'MS': 'MS  (τ=0.13)',
     'PD': 'PD  (τ=0.39)',
     'AD': 'AD  (τ=0.54)',
 }
