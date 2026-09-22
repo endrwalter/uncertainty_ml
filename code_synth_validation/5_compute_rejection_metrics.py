@@ -1,37 +1,27 @@
 """
-Stage 2: compute_rejection_metrics.py
+5_compute_rejection_metrics.py
 =============================================================
-For every condition × method × rejection rate, computes:
-    - Sensitivity (minority recall)
-    - Specificity (majority recall) 
-    - AUPRC
-    - Coverage (fraction of each class retained)
-    - ccAUGRC (class-conditioned AUGRC) for both classes
+For every condition × method × rejection rate, computes metrics 
+(Sensitivity, Specificity, AUPRC, Coverage, ccAUGRC) to evaluate 
+the performance of different uncertainty-based rejection strategies.
 
-Produces two output files:
+Inputs
+------
+--input: ../data/synthetic_results/all_conditions_uncertainty.csv
+         (Produced by 4_compute_uncertainty_scores.py)
 
-1. rejection_curves.csv
-   One row per (tau, d, n, method, rejection_rate)
-   → used for per-condition rejection curve plots
-
-2. scalar_summaries.csv  
-   One row per (tau, d, n, method)
-   → used for phase diagram heatmaps
-   Scalar metrics:
-     - sensitivity_at_30pct        : sensitivity at 30% rejection
-     - specificity_at_30pct
-     - sensitivity_stability       : slope of sensitivity vs rejection (0-50%)
-     - class_separation_score      : sensitivity/specificity ratio at 30% rejection
-     - minority_coverage_at_30pct  : fraction of minority class retained
-     - ccaugrc_progressor          : class-conditioned AUGRC for class 1
-     - ccaugrc_stable              : class-conditioned AUGRC for class 0
-     - global_augrc                : standard AUGRC for comparison
+Outputs
+-------
+--out_dir: Directory where outputs are saved (e.g., ../data/synthetic_results)
+           Produces:
+           1. rejection_curves.csv (Used for rejection curve plots)
+           2. scalar_summaries.csv (Used for phase diagram heatmaps)
 
 Usage
 -----
-    python 5_compute_rejection_metrics.py \
-        --input   ../data/synthetic_results/all_conditions_uncertainty.csv \
-        --out_dir ../data/synthetic_results
+python 5_compute_rejection_metrics.py \
+    --input   ../data/synthetic_results/all_conditions_uncertainty.csv \
+    --out_dir ../data/synthetic_results
 """
 
 import argparse
@@ -309,19 +299,30 @@ def compute_all_rejection_metrics(
             ccaugrc_prog   = compute_augrc_class(group, method_col, method_col, tau, target_class=1)
             ccaugrc_stable = compute_augrc_class(group, method_col, method_col, tau, target_class=0)
 
-            # Global AUGRC (all patients)
+            #   Global AUGRC (all patients)
             risks_global = []
+            coverages_global = []
             for rr in REJECTION_RATES:
                 retained = reject_patients(group, method_col, rr, method_col, tau)
-                if len(retained) > 0 and retained['label'].nunique() > 1:
+                if len(retained) > 0:
                     y_true = retained['label'].values
                     y_pred = (retained['mu'].values >= tau).astype(int)
                     errors = (y_pred != y_true).sum()
                     risk   = errors / len(group)
+                    coverage = len(retained) / len(group)
                 else:
                     risk = 0.0
+                    coverage = 0.0
+                    
                 risks_global.append(risk)
-            global_augrc = float(np.trapezoid(risks_global, REJECTION_RATES))
+                coverages_global.append(coverage)
+                
+            # Integrate risk over actual coverage (trapezoidal)
+            pairs_global = sorted(zip(coverages_global, risks_global))
+            cov_arr_global  = np.array([p[0] for p in pairs_global])
+            risk_arr_global = np.array([p[1] for p in pairs_global])
+            
+            global_augrc = float(np.trapezoid(risk_arr_global, cov_arr_global))     
 
             scalar_records.append({
                 'tau':                    tau,
@@ -346,8 +347,8 @@ def compute_all_rejection_metrics(
     curves_df  = pd.DataFrame(curve_records)
     scalars_df = pd.DataFrame(scalar_records)
 
-    curves_path  = f"{out_dir}/rejection_curves_new.csv"
-    scalars_path = f"{out_dir}/scalar_summaries_new.csv"
+    curves_path  = f"{out_dir}/rejection_curves.csv"
+    scalars_path = f"{out_dir}/scalar_summaries.csv"
 
     curves_df.to_csv(curves_path,  index=False)
     scalars_df.to_csv(scalars_path, index=False)

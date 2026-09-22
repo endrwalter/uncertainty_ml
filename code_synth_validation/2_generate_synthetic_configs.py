@@ -1,21 +1,29 @@
 """
-generate_synthetic_configs.py
+2_generate_synthetic_configs.py
 =============================================================
-Reads synthetic_data/manifest.csv and generates:
-  - One config.ini per condition under synthetic_data/<condition>/config.ini
-  - A commands file (synthetic_commands.txt) listing one command per line,
-    ready to be indexed by SLURM_ARRAY_TASK_ID in the sbatch script
+Reads synthetic_data/manifest.csv and generates condition-specific
+configuration files and a SLURM array commands list.
+
+Inputs
+------
+--manifest:  ../data/synthetic_data/manifest.csv (Produced by 1_synthetic_generator.py)
+--template:  config_synthetic_template.ini
+--code_path: Path to classification code directory
+--script:    Target script for execution (default: main_calibrate.py)
+
+Outputs
+-------
+../data/synthetic_data/<condition>/config.ini (One per condition)
+--output: ../data/synthetic_data/synthetic_commands.txt (Commands for SLURM array)
 
 Usage
 -----
-    python generate_synthetic_configs.py \
+    python 2_generate_synthetic_configs.py \
         --manifest  ../data/synthetic_data/manifest.csv \
         --template  config_synthetic_template.ini \
         --code_path /storage/DSH/projects/neuroart/uncertainty_ml/code_classification \
         --script    main_calibrate.py \
         --output    ../data/synthetic_data/synthetic_commands.txt
-
-All paths should be relative to the sbatch working directory, or absolute.
 """
 
 import argparse

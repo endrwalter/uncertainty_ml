@@ -4,7 +4,7 @@
 ```bash
 python3 1_synthetic_generator.py
 ```
-*Creates `synthetic_data/` with 56 condition folders and a `manifest.csv`.*
+*Creates `synthetic_data/` with condition folders and a `manifest.csv`.*
 
 ### Step 2 - Generate configs and commands file (once)
 ```bash
@@ -42,10 +42,25 @@ python3 5_compute_rejection_metrics.py \
     --out_dir ../data/synthetic_results
 ```
 
-### Step 7 - Generate all figures
+### Step 7 - Generate Main Paper Figures
+Generates the core synthetic manuscript figures (Sensitivity Stability, Failure Map, Separability Interaction, and Appendix Rejection Curves):
 ```bash
-python3 6_visualize_phase_diagram.py \
-    --scalars ../data/synthetic_results/scalar_summaries.csv \
-    --curves  ../data/synthetic_results/rejection_curves.csv \
-    --out_dir ../figures/synthetic
+python3 7_paper_figures.py \
+    --scalars   ../data/synthetic_results/scalar_summaries.csv \
+    --curves    ../data/synthetic_results/rejection_curves.csv \
+    --out_dir   ../figures/paper/
+```
+
+### Step 8 - Structural Divergence Validation (Asymmetry Test)
+Generates the synthetic asymmetry test validation figure evaluating uncertainty gaps across prevalence thresholds:
+```bash
+python3 8_structural_divergence_validation.py \
+    --in_dir  ../data/synthetic_results/ \
+    --out_dir ../figures/paper/
+```
+
+### Step 9 - Sensitivity Analysis & Density Ablation
+Generates supplementary figures demonstrating structural vulnerabilities under varying cost matrices and distribution overlaps:
+```bash
+python3 1r_sensitivity_analysis.py
 ```

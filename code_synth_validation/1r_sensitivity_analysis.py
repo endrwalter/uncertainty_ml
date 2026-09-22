@@ -1,8 +1,31 @@
+"""
+1r_sensitivity_analysis.py
+=============================================================
+Generates supplementary figures demonstrating the structural 
+vulnerabilities of global uncertainty thresholds under varying 
+cost matrices and distribution overlaps.
+
+Inputs
+------
+../data/synthetic_results/all_conditions_uncertainty.csv 
+(Produced by 4_compute_uncertainty_scores.py)
+
+Outputs
+-------
+Supplementary_Elkan_Grid_<METRIC>.pdf (4x4 grid varying prevalence and tau)
+Supplementary_Density_Ablation.pdf (1x3 grid proving Vulnerability 2)
+
+Usage
+-----
+python 1r_sensitivity_analysis.py
+"""
+
 import os
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from sklearn.metrics import average_precision_score
+
 
 # ─────────────────────────────────────────────────────────────
 # CONFIGURAZIONE INIZIALE

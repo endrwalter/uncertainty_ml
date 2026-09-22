@@ -1,22 +1,29 @@
 """
-paper_figures.py
+7_paper_figures.py
 =============================================================
-Generates all publication-ready figures for the paper.
+Generates all publication-ready figures for the synthetic validation
+experiments.
 
-Figures produced
-----------------
-Fig 1 : Conceptual — Three Pathologies (no data needed)
-Fig 2 : Synthetic  — Sensitivity Stability Scaling Law (primary)
-Fig 3 : Synthetic  — Standard UQ Failure Map (phase diagram)
-Fig 4 : Synthetic  — Separability Interaction at tau=0.10
-Fig 5 : Synthetic  — ccAUGRC Conceptual Summary (one condition)
+Inputs
+------
+--scalars: ../data/synthetic_results/scalar_summaries.csv 
+           (Produced by 5_compute_rejection_metrics.py)
+--curves:  ../data/synthetic_results/rejection_curves.csv 
+           (Produced by 5_compute_rejection_metrics.py)
 
+Outputs
+-------
+--out_dir: Directory where outputs are saved (e.g., ../figures/paper/)
+           Produces:
+           1. fig3_sensitivity_stability_n<N>.pdf
+           2. fig2_failure_map_n<N>.pdf
+           4. figC3_rejection_curves_n<N>_<METRIC>.pdf
 
 Usage
 -----
     python 7_paper_figures.py \
-        --scalars   ../data/synthetic_results/scalar_summaries_new.csv \
-        --curves    ../data/synthetic_results/rejection_curves_new.csv \
+        --scalars   ../data/synthetic_results/scalar_summaries.csv \
+        --curves    ../data/synthetic_results/rejection_curves.csv \
         --out_dir   ../figures/paper/
 """
 import matplotlib.patches as patches

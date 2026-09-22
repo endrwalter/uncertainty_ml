@@ -1,27 +1,26 @@
 """
-Stage 1: compute_uncertainty_scores.py
+4_compute_uncertainty_scores.py
 =============================================================
-Loads all_conditions_summary.csv and computes uncertainty scores
-for every patient × condition using four methods:
+Loads aggregated synthetic results and computes uncertainty scores
+for every patient × condition using base and class-conditioned metrics.
 
-    1. H_total   — standard Shannon entropy on raw mu
-    2. Margin    — absolute decision margin |mu - tau|
-    3. H_tau     — piecewise-rescaled entropy (patient-level fix)
-    4. H_tau_CCRC — H_tau with class-conditioned ordinal ranking applied
-    5. Margin_CCRC — Margin with class-conditioned ordinal ranking applied
-
-Output
+Inputs
 ------
-    all_conditions_uncertainty.csv
-    Columns: idx, mu, sigma, label, tau, d, n,
-             h_total, margin, h_tau, ccrc_rank_within_class,
-             predicted_class, h_tau_ccrc_score, margin_ccrc_score
+--input: ../data/synthetic_results/all_conditions_summary.csv 
+         (Produced by 3_build_h_ensembles.py)
+
+Outputs
+-------
+--output: ../data/synthetic_results/all_conditions_uncertainty.csv
+          Appends computed metrics (h_total, margin, h_tau) and their 
+          class-conditioned ordinal rankings (h_tau_ccrc, margin_ccrc, 
+          h_total_ccrc) to the input data.
 
 Usage
 -----
-    python compute_uncertainty_scores.py \
-        --input  ../data/synthetic_results/all_conditions_summary.csv \
-        --output ../data/synthetic_results/all_conditions_uncertainty.csv
+python 4_compute_uncertainty_scores.py \
+    --input  ../data/synthetic_results/all_conditions_summary.csv \
+    --output ../data/synthetic_results/all_conditions_uncertainty.csv
 """
 
 import argparse

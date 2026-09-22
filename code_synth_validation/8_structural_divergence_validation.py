@@ -1,3 +1,29 @@
+"""
+8_structural_divergence_validation.py
+=============================================================
+Generates the synthetic asymmetry test validation figure, 
+evaluating uncertainty asymmetry gaps (ensemble variance vs. 
+cumulative class proportions) across varying prevalence (tau) 
+thresholds and annotating them with Wilcoxon significance.
+
+Inputs
+------
+--in_dir: Directory containing all_conditions_uncertainty.csv 
+          (Produced by 4_compute_uncertainty_scores.py)
+
+Outputs
+-------
+<out_dir>/fig_suppl_synth_asymmetry_test_stat_val.pdf
+
+Usage
+-----
+python 8_structural_divergence_validation.py \
+    --in_dir  ../data/synthetic_results/ \
+    --out_dir   ../figures/paper/
+"""
+
+
+
 import argparse
 import os
 import warnings

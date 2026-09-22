@@ -1,24 +1,29 @@
 """
-build_ensemble_synthetic.py
+3_build_h_ensembles.py
 =============================================================
-Adapts build_ensemble_csv() to the synthetic experiment structure.
+Iterates over manifest.csv conditions to build aggregated ensemble
+predictions for each completed synthetic scenario. 
 
-Key differences from the real-world version:
-  - Iterates over manifest.csv conditions instead of analysis_name/outcome_name
-  - Results live in synthetic_results/<condition>/ mirroring synthetic_data/<condition>/
-  - Patient index is a simple integer (row position), not a clinical ID
-  - Adds condition metadata (tau, d, n) to both aggregated and summary CSVs
-  - Produces a cross-condition summary table for downstream phase diagram analysis
+Inputs
+------
+--manifest:     ../data/synthetic_data/manifest.csv (Produced by 1_synthetic_generator.py)
+--results_root: ../data/synthetic_results/ (Generated dynamically during SLURM array execution)
+                Expected: <results_root>/tau_X_d_Y_n_Z/<model>/raw_results_calibration.csv
 
-Output per condition:
-  synthetic_results/tau_0.10_d_0.5_n_300/aggregated/
-      all_predictions_aggregated.csv      (all models × all iterations)
-      patient_mean_probs_summary.csv      (mu, sigma, label per patient)
+Outputs
+-------
+Per condition:
+  ../data/synthetic_results/<condition>/aggregated/all_predictions_aggregated.csv
+  ../data/synthetic_results/<condition>/aggregated/patient_mean_probs_summary.csv
 
-Output global:
-  synthetic_results/
-      all_conditions_summary.csv          (one row per patient × condition,
-                                           with tau/d/n columns attached)
+Global:
+  ../data/synthetic_results/all_conditions_summary.csv
+
+Usage
+-----
+    python 3_build_h_ensembles.py \
+        --manifest      ../data/synthetic_data/manifest.csv \
+        --results_root  ../data/synthetic_results/
 """
 
 import os
