@@ -7,9 +7,13 @@ import os
 # CONFIG
 # ─────────────────────────────────────────────
 
-INPUT_FILE = "../results/classification/mci_ad_conversion/label_36m/aggregated/all_predictions_mci_ad_conversion_label_36m_aggregated.csv"        
-OUTPUT_PUBLIC = "../results/classification/mci_ad_conversion/label_36m/aggregated/all_predictions_mci_ad_conversion_label_36m_aggregated_public.csv"  
+#INPUT_FILE = "../results/classification/mci_ad_conversion/label_36m/aggregated/all_predictions_mci_ad_conversion_label_36m_aggregated.csv"        
+#OUTPUT_PUBLIC = "../results/classification/mci_ad_conversion/label_36m/aggregated/all_predictions_mci_ad_conversion_label_36m_aggregated_public.csv"  
 SECRET_MAPPING = "../results/classification/mci_ad_conversion/label_36m/aggregated/adni_mapping_key.csv"      
+
+
+INPUT_FILE = "../results/classification/mci_ad_conversion/label_36m/aggregated/patient_mean_probs_label_36m_mci_ad_conversion_model.csv"        
+OUTPUT_PUBLIC = "../results/classification/mci_ad_conversion/label_36m/aggregated/patient_mean_probs_label_36m_mci_ad_conversion_model_public.csv"  
 
 def anonymize_data():
     print(f"Caricamento dati da {INPUT_FILE}...")
