@@ -446,7 +446,7 @@ def fig_rejection_curves(curves: pd.DataFrame, out_dir: str, n: int = 1000, metr
             ax.axvline(0.30, color='#bdc3c7', ls='--', lw=1.0, alpha=0.6, zorder=0)
 
             # Clean subplot titles
-            ax.set_title(f'τ = {tau:.2f}  |  d = {d:.1f}', fontsize=10, pad=6)
+            ax.set_title(f'π = {tau:.2f}  |  d = {d:.1f}', fontsize=10, pad=6)
             
             # Standardized ticks and limits
             ax.tick_params(labelsize=9)
