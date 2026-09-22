@@ -1,3 +1,26 @@
+"""
+5_plot_rejection_dynamics.py
+=============================================================
+Generates a 2x3 grid plot illustrating the rejection queue dynamics 
+(errors deferred vs. correct cases deferred in D0 and D1 queues) 
+across MS, PD, and AD cohorts.
+
+Inputs
+------
+--input: all_diseases_combined_dynamics.csv 
+         (produced by 2_compute_uncertainty_metrics.py)
+
+Outputs
+-------
+<out_dir>/figD1_reject_dynamics_clean.pdf
+
+Usage
+-----
+python 5_plot_rejection_dynamics.py \
+    --input ../results/real_world_results/all_diseases_combined_dynamics.csv \
+    --out_dir ../figures/paper/
+"""
+
 import argparse
 import os
 import pandas as pd
@@ -6,12 +29,7 @@ from matplotlib.lines import Line2D
 import warnings
 
 warnings.filterwarnings('ignore')
-"""
-python 5_plot_rejection_dynamics.py \
-    --input ../results/real_world_results/all_diseases_combined_dynamics.csv \
-    --out_dir ../figures/paper/
 
-"""
 # ─────────────────────────────────────────────
 # GLOBAL STYLE
 # ─────────────────────────────────────────────

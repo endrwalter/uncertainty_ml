@@ -1,3 +1,37 @@
+"""
+3_compute_stats.py
+=============================================================
+Computes bootstrap confidence intervals and statistical tests
+for ccAUGRC differences between methods.
+
+Bootstraps the full aggregated ensemble (deployment reality).
+Gives 95% CI on the difference between methods.
+
+Input per disease
+-----------------
+patient_mean_probs_summary.csv:
+    Must contain 'mu' (mean predicted probability), 'label' 
+    (ground truth), and method-specific predictions.
+
+Outputs
+-----------------------------------------------
+Per disease (<disease> is ms, pd, or ad):
+    <out_dir>/<disease>_distributions.csv
+    <out_dir>/<disease>_statistical_tests.csv
+
+Aggregated across all diseases:
+    <out_dir>/all_statistical_tests.csv
+
+Usage (use public ADNI dataset ".._public.." for MCI to AD conversion):
+-----
+    # From aggregated summary 
+    python 3_compute_stats.py \
+        --ms_summary ../results/classification/ms_progression/progression_independent_from_relapses/aggregated/patient_mean_probs_progression_independent_from_relapses_ms_progression_model.csv \
+        --pd_summary ../results/classification/pd_dyskinesia/FutureDyskinesia/aggregated/patient_mean_probs_FutureDyskinesia_pd_dyskinesia_model.csv \
+        --ad_summary ../results/classification/mci_ad_conversion/label_bl_36m/aggregated/patient_mean_probs_label_bl_36m_mci_ad_conversion_model.csv \
+        --out_dir ../results/statistical_tests/
+"""
+
 import argparse
 import os
 import warnings
@@ -10,27 +44,6 @@ from rejection_utils import (
 )
 
 warnings.filterwarnings('ignore')
-
-
-"""
-=============================================================
-Computes bootstrap confidence intervals and statistical tests
-for ccAUGRC differences between methods.
-
-    Bootstraps the full aggregated ensemble (deployment reality).
-    Gives 95% CI on the difference between methods.
-
-Usage
------
-    # From aggregated summary 
-    python 3_compute_stats.py \
-        --ms_summary ../results/classification/ms_progression/progression_independent_from_relapses/aggregated/patient_mean_probs_progression_independent_from_relapses_ms_progression_model.csv \
-        --pd_summary ../results/classification/pd_dyskinesia/FutureDyskinesia/aggregated/patient_mean_probs_FutureDyskinesia_pd_dyskinesia_model.csv \
-        --ad_summary ../results/classification/mci_ad_conversion/label_bl_36m/aggregated/patient_mean_probs_label_bl_36m_mci_ad_conversion_model.csv \
-        --out_dir ../results/statistical_tests/
-
-"""
-
 
 
 

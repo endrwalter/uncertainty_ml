@@ -1,10 +1,27 @@
 """
-Fig 6 : Real-world — Rejection Curves MS / PD / AD
+5_plot_results_rejection_curves.py
+=============================================================
+Generates a 3x3 grid plot (Fig 6) illustrating the real-world 
+rejection curves (Sensitivity, Specificity, AUPRC) across the 
+MS, PD, and AD cohorts.
 
+Inputs
+------
+--real_dir: Directory containing <disease>_rejection_curves.csv files
+            (produced by 2_compute_uncertainty_metrics.py)
+
+Outputs
+-------
+<out_dir>/fig6_real_rejection_curves.pdf
+
+Usage
+-----
 python 5_plot_results_rejection_curves.py \
     --real_dir  ../results/real_world_results/ \
     --out_dir   ../figures/paper/
 """
+
+
 import argparse
 import os
 import warnings

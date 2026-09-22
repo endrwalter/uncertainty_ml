@@ -9,7 +9,7 @@ python3 1_h_ensemble.py ../results/classification/mci_ad_conversion/label_bl_36m
 ```
 
 ### Step 2 - Compute Uncertainty Metrics
-Computes total predictive uncertainty and class-conditioned rejection curves.
+Computes total predictive uncertainty, class-conditioned rejection curves, asymmetry gap data, and queue dynamics for all cohorts.
 ```bash
 python3 2_compute_uncertainty_metrics.py \
     --ms_path  ../results/classification/ms_progression/progression_independent_from_relapses/aggregated/patient_mean_probs_progression_independent_from_relapses_ms_progression_model.csv \
@@ -28,23 +28,45 @@ python3 3_compute_stats.py \
     --out_dir ../results/statistical_tests/
 ```
 
-### Step 4 - Plot Statistical Tests (AUGRC)
-Generates a printed summary table for both Progressor and Stable ccAUGRC, alongside a grouped bar chart figure with 95% CI error bars and significance annotations for all three diseases.
+### Step 3b - Estimate Bootstrap Stability
+Computes cumulative confidence intervals across bootstrap iterations to evaluate the convergence and stability of the statistical tests.
 ```bash
-python3 4_plot_statistical_results_augrc.py \
+python3 3_estimate_bootstrap_stability.py \
+    --ms_dist ../results/statistical_tests/ms_distributions.csv \
+    --pd_dist ../results/statistical_tests/pd_distributions.csv \
+    --ad_dist ../results/statistical_tests/ad_distributions.csv \
+    --out_csv ../results/statistical_tests/bootstrap_stability_table.csv
+```
+
+### Step 4 - Print Statistical Results
+Loads statistical tests and bootstrap distributions to produce printed summary tables. Applies Holm-Bonferroni correction and outputs publication-ready LaTeX tables for both original and common-support metrics.
+```bash
+python3 4_print_statistical_results_augrc.py \
     --tests   ../results/statistical_tests/all_statistical_tests.csv \
     --distrib ../results/statistical_tests/ \
     --out_dir ../figures/paper/
 ```
 
-### Step 5 - Plot Results
-Generates the final manuscript figures:
-* **Fig 6**: Real-world — Rejection Curves MS / PD / AD
-* **Fig 7**: Real-world — Asymmetry Test
-* **Fig 8**: Real-world — ccAUGRC Decomposition Table
+### Step 5 - Generate Figures
+Generates the final manuscript figures across three individual scripts:
 
+**Real-world Rejection Curves** (Sensitivity, Specificity, AUPRC)
 ```bash
-python3 5_plot_results.py \
+python3 5_plot_results_rejection_curves.py \
     --real_dir  ../results/real_world_results/ \
     --out_dir   ../figures/paper/
+```
+
+**Real-world Asymmetry Test** (Ensemble variance vs distance percentiles)
+```bash
+python3 5_plot_results_asymmetry_test.py \
+    --real_dir  ../results/real_world_results/ \
+    --out_dir   ../figures/paper/
+```
+
+**Rejection Queue Dynamics** (Errors vs correct cases deferred)
+```bash
+python3 5_plot_rejection_dynamics.py \
+    --input ../results/real_world_results/all_diseases_combined_dynamics.csv \
+    --out_dir ../figures/paper/
 ```

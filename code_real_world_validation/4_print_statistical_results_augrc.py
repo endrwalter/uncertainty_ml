@@ -1,11 +1,20 @@
 """
-print_statistical_results.py
+4_print_statistical_results_augrc.py
 =============================================================
-Loads all_statistical_tests.csv and produces:
+Loads statistical tests and bootstrap distributions to produce 
+printed summary tables for Progressor ccAUGRC, Stable ccAUGRC, 
+and Global AUGRC. Applies Holm-Bonferroni correction and outputs 
+publication-ready LaTeX tables.
 
-1. A printed summary table for both Progressor and Stable ccAUGRC
-2. A figure: grouped bar chart with 95% CI error bars
-   and significance annotations for all three diseases
+Inputs
+------
+--tests:   all_statistical_tests.csv (produced by 3_compute_stats.py)
+--distrib: Directory containing {disease}_distributions.csv files
+
+Outputs
+-------
+<out_dir>/statistical_summary.tex
+<out_dir>/statistical_summary_cs.tex (Common Support)
 
 Usage
 -----

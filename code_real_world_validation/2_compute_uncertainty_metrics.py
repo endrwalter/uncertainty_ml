@@ -1,3 +1,38 @@
+"""
+2_compute_uncertainty_metrics.py
+=============================================================
+Computes all rejection metrics for the three real-world cohorts
+(MS, PD, AD), following the exact same methodology as the
+synthetic compute_rejection_metrics.py.
+
+Input per disease
+-----------------
+patient_mean_probs_summary.csv produced by build_ensemble_csv:
+    idx, mu, sigma, label, n_predictions, all_probs
+
+Outputs
+-----------------------------------------------
+Per disease (<disease> is ms, pd, or ad):
+    <out_dir>/<disease>_rejection_curves.csv
+    <out_dir>/<disease>_scalar_summaries.csv
+    <out_dir>/<disease>_asymmetry.csv
+    <out_dir>/<disease>_combined_dynamics.csv
+
+Aggregated across all diseases:
+    <out_dir>/all_diseases_rejection_curves.csv
+    <out_dir>/all_diseases_scalar_summaries.csv
+    <out_dir>/all_diseases_asymmetry.csv
+    <out_dir>/all_diseases_combined_dynamics.csv
+
+Usage (here use the ".._public.." file for ADNI MCI->AD conversion):
+-----
+python 2_compute_uncertainty_metrics.py \
+    --ms_path  ../results/classification/ms_progression/progression_independent_from_relapses/aggregated/patient_mean_probs_progression_independent_from_relapses_ms_progression_model.csv \
+    --pd_path  ../results/classification/pd_dyskinesia/FutureDyskinesia/aggregated/patient_mean_probs_FutureDyskinesia_pd_dyskinesia_model.csv \
+    --ad_path  ../results/classification/mci_ad_conversion/label_bl_36m/aggregated/patient_mean_probs_label_bl_36m_mci_ad_conversion_model.csv \
+    --out_dir  ../results/real_world_results/
+"""
+
 import argparse
 import os
 import warnings
@@ -12,40 +47,6 @@ from rejection_utils import (
 )
 
 warnings.filterwarnings('ignore')
-"""
-compute_rejection_metrics_realworld.py
-=============================================================
-Computes all rejection metrics for the three real-world cohorts
-(MS, PD, AD), following the exact same methodology as the
-synthetic compute_rejection_metrics.py.
-
-Input per disease
------------------
-patient_mean_probs_summary.csv produced by build_ensemble_csv:
-    idx, mu, sigma, label, n_predictions, all_probs
-
-Output per disease 
------------------------------------------------
-    <out_dir>/
-        ms_rejection_curves.csv
-        pd_rejection_curves.csv
-        ad_rejection_curves.csv
-        ms_scalar_summaries.csv
-        pd_scalar_summaries.csv
-        ad_scalar_summaries.csv
-        ms_asymmetry.csv
-        pd_asymmetry.csv
-        ad_asymmetry.csv
-
-Usage
------
-python 2_compute_uncertainty_metrics.py \
-    --ms_path  ../results/classification/ms_progression/progression_independent_from_relapses/aggregated/patient_mean_probs_progression_independent_from_relapses_ms_progression_model.csv \
-    --pd_path  ../results/classification/pd_dyskinesia/FutureDyskinesia/aggregated/patient_mean_probs_FutureDyskinesia_pd_dyskinesia_model.csv \
-    --ad_path  ../results/classification/mci_ad_conversion/label_bl_36m/aggregated/patient_mean_probs_label_bl_36m_mci_ad_conversion_model.csv \
-    --out_dir  ../results/real_world_results/
-"""
-
 
 
 

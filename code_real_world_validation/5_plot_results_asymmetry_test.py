@@ -1,3 +1,27 @@
+"""
+5_plot_results_asymmetry_test.py
+=============================================================
+Generates a 1x3 grid plot illustrating the real-world 
+asymmetry test (ensemble variance vs. distance percentiles) 
+for the MS, PD, and AD cohorts, annotated with Wilcoxon 
+significance stars.
+
+Inputs
+------
+--real_dir: Directory containing <disease>_asymmetry.csv files
+            (produced by 2_compute_uncertainty_metrics.py)
+
+Outputs
+-------
+<out_dir>/fig7_asymmetry_test_stat_val.pdf
+
+Usage
+-----
+python 5_plot_results_asymmetry_test.py \
+    --real_dir  ../results/real_world_results/ \
+    --out_dir   ../figures/paper/
+"""
+
 import argparse
 import os
 import warnings
@@ -13,11 +37,6 @@ from scipy.stats import gaussian_kde, wilcoxon # <-- Added wilcoxon
 
 warnings.filterwarnings('ignore')
 
-'''
-python 5_plot_results_asymmetry_test.py \
-    --real_dir  ../results/real_world_results/ \
-    --out_dir   ../figures/paper/
-'''
 # ─────────────────────────────────────────────
 # GLOBAL STYLE
 # ─────────────────────────────────────────────
